@@ -41,7 +41,7 @@ INSTALLED_APPS = (
     'django_extensions',
     'storages',
 
-    # 'refundmytrain.apps.storage',
+    'refundmytrain.apps.corpus',
 )
 
 MIDDLEWARE_CLASSES = (
