@@ -1,0 +1,5 @@
+.venv
+log/*.log
+.vagrant/*
+.apt-cache/*
+*.pyc
