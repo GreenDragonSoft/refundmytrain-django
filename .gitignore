@@ -3,3 +3,4 @@ log/*.log
 .vagrant/*
 .apt-cache/*
 *.pyc
+collected_static/*
