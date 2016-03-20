@@ -1,0 +1,9 @@
+# This file is part of the Vagrant config, and gets overwritten on each
+# `vagrant provision`.
+
+. ~/venv/bin/activate
+cd app
+
+export DJANGO_SETTINGS_MODULE="refundmytrain.settings.development"
+export USE_FILESYSTEM_STORAGE=true
+
