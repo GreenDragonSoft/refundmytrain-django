@@ -1,7 +1,13 @@
+boto==2.39.0
+botocore==1.4.5
 Django==1.9.4
 django-extensions==1.6.1
+django-storages==1.4
 dj-database-url==0.4.0
+docutils==0.12
 gunicorn==19.4.5
+jmespath==0.9.0
 psycopg2==2.6.1
+python-dateutil==2.5.1
 six==1.10.0
 whitenoise==2.0.6

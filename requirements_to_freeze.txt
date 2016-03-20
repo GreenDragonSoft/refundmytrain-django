@@ -1,5 +1,7 @@
+boto
 Django
 django-extensions
+django-storages
 dj-database-url
 gunicorn
 psycopg2
