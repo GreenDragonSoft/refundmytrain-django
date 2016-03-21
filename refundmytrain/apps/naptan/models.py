@@ -19,8 +19,8 @@ class NaptanRailStation(models.Model):
     # },
 
     def __str__(self):
-        return '<NaptanRailStation name="{}">'.format(
-            self.name)
+        return '<NaptanRailStation "{}" ({})>'.format(
+            self.name, self.three_alpha)
 
     tiploc = models.CharField(
         unique=True,  # Unlike in CORPUS, they are unique in NAPTAN
