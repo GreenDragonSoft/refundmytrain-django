@@ -23,6 +23,7 @@ class Command(BaseCommand):
             NaptanRailStation.objects.all().delete()
 
             success_counter = 0
+            unique_3_alphas = set()
 
             for record in json.load(f):
 
@@ -35,10 +36,11 @@ class Command(BaseCommand):
 
                 b.push(NaptanRailStation(**obj))
                 success_counter += 1
+                unique_3_alphas.add(obj['three_alpha'])
 
             self.stdout.write(self.style.SUCCESS(
-                'Created {} locations.'.format(
-                    success_counter)))
+                'Created {} locations with {} unique 3-alpha codes.'.format(
+                    success_counter, len(unique_3_alphas))))
 
     @staticmethod
     def strip_trailing_rail_station(string):
