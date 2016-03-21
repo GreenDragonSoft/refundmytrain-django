@@ -43,6 +43,7 @@ INSTALLED_APPS = (
 
     'refundmytrain.apps.corpus',
     'refundmytrain.apps.naptan',
+    'refundmytrain.apps.corpus_naptan_link',
 )
 
 MIDDLEWARE_CLASSES = (
