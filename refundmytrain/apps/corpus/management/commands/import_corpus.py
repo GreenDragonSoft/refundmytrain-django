@@ -1,7 +1,10 @@
+import batcher
+
 import json
 
+from django.db import transaction
+from django.core.management.base import BaseCommand
 
-from django.core.management.base import BaseCommand, CommandError
 from refundmytrain.apps.corpus.models import CorpusLocation
 
 
@@ -13,17 +16,21 @@ class Command(BaseCommand):
         parser.add_argument('corpus_json', type=str)
 
     def handle(self, *args, **options):
-        with open(options['corpus_json'], 'r') as f:
+        with open(options['corpus_json'], 'r') as f, \
+                batcher.batcher(CorpusLocation.objects.bulk_create) as b, \
+                transaction.atomic():
+
             CorpusLocation.objects.all().delete()
 
             success_counter = 0
-            skip_counter = 0
 
             for record in json.load(f)['TIPLOCDATA']:
 
                 obj = {
                     'tiploc': self.parse_field(
                         record['TIPLOC']),
+                    'uic_code': self.parse_field(
+                        record['UIC']),
                     'three_alpha': self.parse_field(
                         record['3ALPHA']),
                     'stanox': self.parse_field(
@@ -36,24 +43,12 @@ class Command(BaseCommand):
                         record['NLCDESC16'])
                 }
 
-                if obj['three_alpha'] is None or obj['stanox'] is None:
-                    skip_counter += 1
-                    # self.stdout.write(self.style.WARNING(
-                    #     'Skipping location without 3-alpha'))
-                    continue  # Skip any non-stations for now.
-
-                obj, created = CorpusLocation.objects.update_or_create(
-                        stanox=obj.pop('stanox'), defaults=obj)
-
+                b.push(CorpusLocation(**obj))
                 success_counter += 1
 
             self.stdout.write(self.style.SUCCESS(
-                'Created {} locations (having 3-alpha and STANOX)'.format(
+                'Created {} locations.'.format(
                     success_counter)))
-
-            self.stdout.write(self.style.WARNING(
-                'Skipped {} locations (missing 3-alpha/STANOX)'.format(
-                    skip_counter)))
 
     @staticmethod
     def parse_field(string):
