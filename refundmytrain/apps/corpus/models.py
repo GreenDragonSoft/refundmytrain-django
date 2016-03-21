@@ -12,18 +12,28 @@ class CorpusLocation(models.Model):
     #     "NLCDESC": "AUTHORISED INPUT LOCATION 0009"
     #
     # },
-    # NOTE: no idea what a UIC number is so omitting
 
     def __str__(self):
         return '<CorpusLocation desc="{}">'.format(self.nlc_description)
 
     tiploc = models.CharField(
-        unique=True,  # Note that this implies a DB index
+        unique=False,
+        db_index=True,
         null=True,
         blank=True,
         max_length=50,
         help_text=('Timing Point Location - Codes relating to points used '
                    'in deriving train schedules')
+    )
+
+    uic_code = models.CharField(
+        unique=False,
+        db_index=True,
+        null=True,
+        blank=True,
+        max_length=50,
+        help_text=('International Union of Railways (Union Internationale '
+                   'des Chemins de fer) code.')
     )
 
     three_alpha = models.CharField(
@@ -50,7 +60,8 @@ class CorpusLocation(models.Model):
     )
 
     national_location_code = models.CharField(
-        unique=True,  # Note that this implies a DB index
+        unique=False,
+        db_index=True,
         null=True,
         blank=True,
         max_length=8,  # just in case they increase from 6!
@@ -62,6 +73,7 @@ class CorpusLocation(models.Model):
     nlc_description = models.CharField(
         null=True,
         blank=True,
+        db_index=True,
         max_length=256,
         help_text='Description of the national location code (NLC)'
     )
@@ -69,6 +81,8 @@ class CorpusLocation(models.Model):
     nlc_short_description = models.CharField(
         null=True,
         blank=True,
-        max_length=16,
-        help_text='16-char description of the national location code (NLC)'
+        db_index=True,
+        max_length=32,
+        help_text=('(Supposedly) 16-char description of the national '
+                   'location code (NLC)')
     )
