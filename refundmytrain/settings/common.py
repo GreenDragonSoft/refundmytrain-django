@@ -21,7 +21,8 @@ BASE_DIR = abspath(pjoin(dirname(__file__), '..', '..'))
 
 PROJECT_ROOT = abspath(pjoin(dirname(__file__), '..'))
 
-sys.path.append(pjoin(BASE_DIR, 'apps'))
+sys.path.append(pjoin(PROJECT_ROOT, 'apps'))
+sys.path.append(pjoin(PROJECT_ROOT, 'libs'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
@@ -39,6 +40,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'django_nose',
     'storages',
 
     'refundmytrain.apps.corpus',
@@ -57,6 +59,8 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
 )
+
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 ROOT_URLCONF = 'refundmytrain.urls'
 
