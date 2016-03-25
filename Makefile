@@ -9,3 +9,7 @@ load:
 	./manage.py import_corpus db/network_rail_corpus.json
 	./manage.py import_naptan db/naptan_rail_locations.json
 	./manage.py build_corpus_naptan_links
+
+.PHONY: runserver
+runserver:
+	./manage.py runserver 0.0.0.0:8001
