@@ -21,8 +21,8 @@ BASE_DIR = abspath(pjoin(dirname(__file__), '..', '..'))
 
 PROJECT_ROOT = abspath(pjoin(dirname(__file__), '..'))
 
-sys.path.append(pjoin(PROJECT_ROOT, 'apps'))
-sys.path.append(pjoin(PROJECT_ROOT, 'libs'))
+# sys.path.append(pjoin(PROJECT_ROOT, 'apps'))
+# sys.path.append(pjoin(PROJECT_ROOT, 'libs'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
@@ -42,11 +42,13 @@ INSTALLED_APPS = (
     'django_extensions',
     'django_nose',
     'storages',
+    'rest_framework',
 
     'refundmytrain.apps.corpus',
     'refundmytrain.apps.naptan',
     'refundmytrain.apps.corpus_naptan_link',
     'refundmytrain.apps.operators',
+    'refundmytrain.apps.trainmovements',
 )
 
 MIDDLEWARE_CLASSES = (

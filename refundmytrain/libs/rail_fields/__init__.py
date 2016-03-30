@@ -24,3 +24,22 @@ class TrainMovementEventField(models.CharField):
         )
 
         super(TrainMovementEventField, self).__init__(*args, **kwargs)
+
+
+class TrainIDField(models.CharField):
+    """
+    The 10-character unique identity for this train. This is used
+    in other TRUST messages to identify the train.
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs['max_length'] = 10
+
+        if 'help_text' not in kwargs:
+            kwargs['help_text'] = (
+                'The 10-character unique identity for this train. This is '
+                'used in other TRUST messages to identify the train.'
+            )
+        # kwargs['validators'] = [RegexValidator(self.PATTERN)]
+
+        super(TrainIDField, self).__init__(*args, **kwargs)
