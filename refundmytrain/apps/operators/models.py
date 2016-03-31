@@ -21,3 +21,6 @@ class OperatingCompany(models.Model):
         max_length=256,
         db_index=True,
     )
+
+    def __str__(self):
+        return '{} ({})'.format(self.name, self.atoc_code)

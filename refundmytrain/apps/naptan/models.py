@@ -19,7 +19,7 @@ class NaptanRailStation(models.Model):
     # },
 
     def __str__(self):
-        return '<NaptanRailStation "{}" ({})>'.format(
+        return '{} ({})'.format(
             self.name, self.three_alpha)
 
     tiploc = models.CharField(
