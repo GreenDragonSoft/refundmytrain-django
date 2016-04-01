@@ -68,6 +68,8 @@ class MinutesLateFilter(admin.SimpleListFilter):
 class TrainMovementMessageAdmin(admin.ModelAdmin):
     list_display = (
         'message_id',
+        'timetable_datetime',
+        'actual_datetime',
         'train_id',
         'location_station',
         'operating_company',
@@ -77,12 +79,13 @@ class TrainMovementMessageAdmin(admin.ModelAdmin):
 
     list_filter = (
         'variation_status',
+        'planned_event_type',
         MinutesLateFilter,
         'operating_company',
     )
 
     search_fields = (
-        '=train_entity__train_id',
+        '=train_id',
         'location_station__name',
         '=location_station__three_alpha',
         '=location_stanox',
