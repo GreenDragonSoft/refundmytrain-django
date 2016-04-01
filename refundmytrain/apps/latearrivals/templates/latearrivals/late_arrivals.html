@@ -1,0 +1,15 @@
+{% extends 'refundmytrain/base.html' %}
+
+{% block content %}
+
+<table>
+  <tbody>
+    {% for msg in train_movement_messages %}
+    <tr>
+    <td>{{ msg.timetable_datetime|time }}</td>
+    <td>{{ msg.location_station }}</td>
+    <td>Arrived {{ msg.timetable_variation }} minutes late</td>
+    </tr>
+    {% endfor %}
+
+{% endblock %}

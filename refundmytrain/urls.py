@@ -21,4 +21,6 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
     url(r'^train-movements/', include('refundmytrain.apps.trainmovements.urls')),
+
+    url(r'^late-arrivals/', include('refundmytrain.apps.latearrivals.urls')),
 ]
