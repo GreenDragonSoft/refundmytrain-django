@@ -1,0 +1,19 @@
+{% load static from staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>RefundMyTrain.com</title>
+    <link rel="stylesheet" type="text/css" href="{% static "css/app.css" %}">
+    <link href="https://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+</head>
+<body>
+    <div class="main">
+      {% block nav %}
+      {% endblock %}
+      {% block content %}
+      {% endblock %}
+    </div>
+</body>
+</html>
