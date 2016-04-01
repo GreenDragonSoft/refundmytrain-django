@@ -42,6 +42,7 @@ INSTALLED_APPS = (
     'django_extensions',
     'django_nose',
     'storages',
+    'rest_framework',
 
     'refundmytrain.apps.corpus',
     'refundmytrain.apps.naptan',
