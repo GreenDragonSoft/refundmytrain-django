@@ -1,3 +1,5 @@
+import datetime
+
 from collections import OrderedDict
 
 from django.db import models
@@ -33,8 +35,7 @@ class Location(models.Model):
     name = models.CharField(max_length=256)
 
     def __str__(self):
-        return '{}: {} ({})'.format(
-            self.tiploc,
+        return '{} ({})'.format(
             self.name,
             self.three_alpha if self.three_alpha else '-'
         )
@@ -75,14 +76,30 @@ class TimetableJourney(models.Model):
         blank=True
     )
 
+    def __str__(self):
+        return '{}'.format(self.rtti_train_id)
+
     def num_calling_points(self):
         return self.calling_points.all().count()
 
     def start(self):
-        return self.calling_points.all().order_by('id')[0]
+        return self.calling_points.all().order_by('id')[0].location
 
     def end(self):
-        return self.calling_points.all().order_by('id').reverse()[0]
+        return self.calling_points.all().order_by('id').reverse()[0].location
+
+    @property
+    def earliest_possible_event(self):
+        """
+        Return the earliest possible datetime for an event happening on this
+        journey. Effectively this is the time at which the day flips: we're
+        saying 4am on the day of the journey is the earliest. This helps
+        to categorise events after midnight to the correct day.
+        """
+        return datetime.datetime.combine(
+            self.start_date,
+            datetime.time(4)
+        )
 
 
 class CallingPoint(models.Model):
@@ -116,11 +133,51 @@ class CallingPoint(models.Model):
 
     @property
     def timetable_arrival_datetime(self):
-        return None
+        return self.combine_date_time(self.timetable_arrival_time)
 
     @property
-    def timetable_departure_datetime(self):
-        return None
+    def actual_arrival_datetime(self):
+        return self.combine_date_time(self.actual_arrival_time.time)
+
+    def combine_date_time(self, time):
+        """
+        For example if a train has a start date of 2nd April, a time of 01:00
+        is going to be the next day (3rd April)
+        """
+
+        possible_datetime = datetime.datetime.combine(
+            self.journey.start_date, time)
+
+        if possible_datetime < self.journey.earliest_possible_event:
+            return possible_datetime + datetime.timedelta(hours=24)
+
+        else:
+            return possible_datetime
+
+    def late_text(self):
+        if self.actual_arrival_time is None:
+            return None
+
+        if self.actual_arrival_time.time <= self.timetable_arrival_time:
+            return None
+
+        mins_late = int((
+            self.actual_arrival_datetime - self.timetable_arrival_datetime
+        ).total_seconds() / 60)
+
+        if mins_late <= 0:
+            return None
+
+        return '{} mins late'.format(mins_late)
 
     def __str__(self):
         return self.location.name
+
+
+class ActualArrival(models.Model):
+    timetabled_calling_point = models.OneToOneField(
+        CallingPoint,
+        related_name='actual_arrival_time',
+    )
+
+    time = models.TimeField()

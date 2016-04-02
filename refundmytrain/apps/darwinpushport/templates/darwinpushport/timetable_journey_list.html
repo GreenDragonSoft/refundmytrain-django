@@ -1,0 +1,13 @@
+{% extends 'refundmytrain/base.html' %}
+
+{% block content %}
+
+<p>{{ object_list.count }} </p>
+<ul>
+	{% for journey in object_list %}
+	<li><a href="{% url 'journey-detail' pk=journey %}">{{ journey }}</a></li>
+	{% endfor %}
+</ul>
+
+
+{% endblock %}

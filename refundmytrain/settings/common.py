@@ -49,6 +49,7 @@ INSTALLED_APPS = (
     'refundmytrain.apps.corpus_naptan_link',
     'refundmytrain.apps.operators',
     'refundmytrain.apps.trainmovements',
+    'refundmytrain.apps.darwinpushport',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -111,6 +112,8 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+
+TIME_FORMAT = 'H:i'
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

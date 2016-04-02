@@ -1,0 +1,30 @@
+{% extends 'refundmytrain/base.html' %}
+
+{% block content %}
+
+<div class="container">
+
+  <h1>{{ journey.start }} to {{ journey.end }}</h1>
+  <h2>{{ journey.start_date|date }}</h2>
+
+  <table class="table"
+    <tbody>
+    {% for loc in journey.calling_points.all %}
+    <tr>
+      <td>{{ loc.location.name }}</td>
+      <td>
+        {% if loc.late_text %}
+        <span style="text-decoration: line-through">{{ loc.timetable_arrival_time|time|default:'-' }}</span><br />
+        <span style="color: red"> {{ loc.late_text }}
+
+        {% else %}
+        <span>{{ loc.timetable_arrival_time|time|default:'-' }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}
