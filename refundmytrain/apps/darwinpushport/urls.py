@@ -20,11 +20,11 @@ from .views import (
 
 urlpatterns = [
 
-    url(r'^journeys/$',
+    url(r'^$',
         TimetableJourneyList.as_view(),
         name='journey-list'),
 
-    url(r'^journeys/(?P<pk>\d{15})/$',
+    url(r'^journey/(?P<pk>\d{15})/$',
         TimetableJourneyDetail.as_view(),
         name='journey-detail'),
 ]
