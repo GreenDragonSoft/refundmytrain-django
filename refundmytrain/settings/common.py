@@ -115,6 +115,7 @@ USE_L10N = True
 USE_TZ = True
 
 TIME_FORMAT = 'H:i'
+DATE_FORMAT = 'l jS N'
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

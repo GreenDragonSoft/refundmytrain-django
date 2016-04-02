@@ -21,19 +21,15 @@ span.late-text {
   color: red;
 }
 
+ul.recent-late-trains {
+  padding: 0;
+}
 
+ul.recent-late-trains li a {
+  display: block;
+  color: black;
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ul.recent-late-trains span.operating-company, span.date {
+  font-size: 70%;
+}

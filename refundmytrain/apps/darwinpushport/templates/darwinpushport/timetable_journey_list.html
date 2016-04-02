@@ -2,12 +2,26 @@
 
 {% block content %}
 
-<p>{{ object_list.count }} </p>
-<ul>
-	{% for journey in object_list %}
-	<li><a href="{% url 'journey-detail' pk=journey %}">{{ journey }}</a></li>
-	{% endfor %}
-</ul>
+<div class="container">
+  <h1>Late Trains</h1>
+
+  <ul class="recent-late-trains">
+    {% for journey in object_list %}
+    <li class="list-group-item">
+      <a href="{% url 'journey-detail' pk=journey %}">
+        <span class="timetable-time">{{ journey.start.timetable_departure_time|time }}</span>
+        <span>{{ journey.start.location.name }}</span>
+        <br>
+        <span class="timetable-time">{{ journey.end.timetable_arrival_time|time }}</span>
+        <span>{{ journey.end.location.name }}</span>
+        <br>
+        <span class="date">{{ journey.start_date|date }}</span>, <span class="operating-company">{{ journey.operating_company.name }}</span>
+
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
 
 
 {% endblock %}
