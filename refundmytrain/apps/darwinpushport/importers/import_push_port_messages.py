@@ -1,13 +1,8 @@
-import re
-import sys
-
-import batcher
 
 from django.db import transaction
-from django.core.management.base import BaseCommand
 
 from refundmytrain.apps.darwinpushport.models import (
-    ActualArrival, OperatingCompany, Location, TimetableJourney, CallingPoint
+    ActualArrival, OperatingCompany, Location, CallingPoint
 )
 
 from lxml import etree
@@ -38,26 +33,15 @@ DEPARTED_TAG = (
 )
 
 
-class Command(BaseCommand):
-    help = ('Imports a daily schedule file from National Rail Darwin')
-
-    def add_arguments(self, parser):
-        parser.add_argument('pushport_xml', type=str)
-
-    def handle(self, *args, **options):
-
-        assert Location.objects.all().count()
-        assert OperatingCompany.objects.all().count()
-
-        with open(options['pushport_xml'], 'rb') as f:
-            for xml_fragment in f.readlines():
-                journies_created = load_xml_file(xml_fragment, self.stdout)
-
-        self.stdout.write(self.style.SUCCESS(
-            'Created {} journies.'.format(journies_created)))
+def import_push_port_messages(f):
+    for xml_fragment in f.readlines():
+        load_journies_from_xml_file(xml_fragment)
 
 
-def load_xml_file(xml_string, stdout):
+def load_journies_from_xml_file(xml_string):
+    assert Location.objects.all().count()
+    assert OperatingCompany.objects.all().count()
+
     root = etree.fromstring(xml_string)
     ur_element = root[0]
 
@@ -67,16 +51,16 @@ def load_xml_file(xml_string, stdout):
         message_type = element.tag
 
         if message_type == TRAIN_STATUS_TAG:  # train status
-            handle_train_status(element, stdout)
+            handle_train_status(element)
 
-        else:
-            stdout.write('Not implemented: {}'.format(message_type))
+        # else:
+        #     stdout.write('Not implemented: {}'.format(message_type))
 
 
-def handle_train_status(ts_element, stdout):
+def handle_train_status(ts_element):
     rtti_train_id = ts_element.attrib['rid']
-    start_date = ts_element.attrib['ssd']
-    uid = ts_element.attrib['uid']
+    # start_date = ts_element.attrib['ssd']
+    # uid = ts_element.attrib['uid']
 
     for sub in ts_element:
         full_tag = sub.tag
@@ -94,7 +78,7 @@ def handle_train_status(ts_element, stdout):
 def handle_train_status_location(location_element, rtti_train_id):
     tiploc = location_element.attrib['tpl']
     timetable_arrival_time = location_element.attrib.get('pta', None)
-    timetable_departure_time = location_element.attrib.get('ptd', None)
+    # timetable_departure_time = location_element.attrib.get('ptd', None)
 
     for time_status in location_element:
         if 'at' not in time_status.attrib:
