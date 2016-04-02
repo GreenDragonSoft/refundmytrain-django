@@ -1,3 +1,5 @@
+import gzip
+
 from django.core.management.base import BaseCommand
 
 from refundmytrain.apps.darwinpushport.importers import import_reference_data
@@ -11,9 +13,17 @@ class Command(BaseCommand):
         parser.add_argument('reference_json', type=str)
 
     def handle(self, *args, **options):
-        with open(options['reference_json'], 'rb') as f:
-            locations_created, operating_companies_created = \
-                    import_reference_data(f)
+
+        filename = options['reference_json']
+
+        if filename.endswith('.gz'):
+            with gzip.open(filename, 'rb') as f:
+                locations_created, operating_companies_created = \
+                        import_reference_data(f)
+        else:
+            with open(filename, 'rb') as f:
+                locations_created, operating_companies_created = \
+                        import_reference_data(f)
 
         self.stdout.write(self.style.SUCCESS(
             'Created {} locations, {} operating companies'.format(
