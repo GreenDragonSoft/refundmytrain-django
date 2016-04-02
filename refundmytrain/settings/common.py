@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'django_nose',
     'storages',
     'rest_framework',
+    'debug_toolbar',
 
     'refundmytrain.apps.corpus',
     'refundmytrain.apps.naptan',

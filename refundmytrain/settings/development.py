@@ -38,6 +38,7 @@ LOGGING = {
 
 # TOTALLY INSECURE: We use a single secret in development, not in production :)
 SECRET_KEY = "xanXgBP3nKIoGI6aMxGz14oApj1YZZzW4iZzSp5Gc+m+Nh1qIu8pZeKWRRK0"
+INTERNAL_IPS = ['127.0.0.1', '::1', '10.0.2.2']
 
 
 # Database
