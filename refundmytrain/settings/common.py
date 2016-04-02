@@ -32,7 +32,7 @@ DEBUG = False
 
 # Application definition
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,7 +43,6 @@ INSTALLED_APPS = (
     'django_nose',
     'storages',
     'rest_framework',
-    'debug_toolbar',
 
     'refundmytrain.apps.corpus',
     'refundmytrain.apps.naptan',
@@ -51,7 +50,7 @@ INSTALLED_APPS = (
     'refundmytrain.apps.operators',
     'refundmytrain.apps.trainmovements',
     'refundmytrain.apps.darwinpushport',
-)
+]
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',

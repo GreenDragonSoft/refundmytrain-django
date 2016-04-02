@@ -1,6 +1,7 @@
 boto==2.39.0
 botocore==1.4.5
 Django==1.9.4
+django-debug-toolbar==1.4
 django-extensions==1.6.1
 django-nose==1.4.3
 djangorestframework==3.3.3
