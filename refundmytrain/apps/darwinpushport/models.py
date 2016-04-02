@@ -155,15 +155,16 @@ class CallingPoint(models.Model):
             return possible_datetime
 
     def late_text(self):
-        if self.actual_arrival_time is None:
+        actual = self.actual_arrival_datetime
+        timetabled = self.timetable_arrival_datetime
+
+        if actual is None:
             return None
 
-        if self.actual_arrival_time.time <= self.timetable_arrival_time:
+        if actual <= timetabled:
             return None
 
-        mins_late = int((
-            self.actual_arrival_datetime - self.timetable_arrival_datetime
-        ).total_seconds() / 60)
+        mins_late = int((actual - timetabled).total_seconds() / 60)
 
         if mins_late <= 0:
             return None

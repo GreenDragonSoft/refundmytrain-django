@@ -2,24 +2,49 @@
 
 {% block content %}
 
-<div class="container">
+<div class="container journey-detail">
 
-  <h1>{{ journey.start }} to {{ journey.end }}</h1>
+  <h1>{{ journey.start.name }} to {{ journey.end.name }}</h1>
   <h2>{{ journey.start_date|date }}</h2>
 
-  <table class="table"
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Arrival</th>
+        <th>Departure</th>
+      </tr>
     <tbody>
     {% for loc in journey.calling_points.all %}
     <tr>
       <td>{{ loc.location.name }}</td>
+
       <td>
-        {% if loc.late_text %}
-        <span style="text-decoration: line-through">{{ loc.timetable_arrival_time|time|default:'-' }}</span><br />
-        <span style="color: red"> {{ loc.late_text }}
+        {% if not loc.actual_arrival_time %}
+
+          <span class="timetable-time">{{ loc.timetable_arrival_time|time|default:'-' }}</span>
+
+        {% elif loc.late_text %}
+
+          <span class="timetable-time timetable-time-wrong">
+            {{ loc.timetable_arrival_time|time|default:'-' }}
+          </span>
+
+          <span>
+            {{ loc.actual_arrival_datetime|time|default:'-' }}
+          </span><br />
+
+          <span class="late-text">{{ loc.late_text }}</span>
 
         {% else %}
-        <span>{{ loc.timetable_arrival_time|time|default:'-' }}</span>
+
+          <span class="actual-time">{{ loc.timetable_arrival_time|time|default:'-' }}</span>
+
         {% endif %}
+      </td>
+
+      <td>
+        <span class="timetable-time">{{ loc.timetable_departure_time|time|default:'-' }}</span>
       </td>
     </tr>
     {% endfor %}

@@ -5,6 +5,23 @@
    ========================================================================== */
 
 
+span.timetable-time {
+  color: rgb(128, 128, 128);
+}
+
+span.actual-time {
+  color: rgb(0, 0, 0);
+}
+
+span.timetable-time-wrong {
+    text-decoration: line-through;
+}
+
+span.late-text {
+  color: red;
+}
+
+
 
 
 
