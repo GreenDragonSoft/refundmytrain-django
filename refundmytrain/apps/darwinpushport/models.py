@@ -182,3 +182,11 @@ class ActualArrival(models.Model):
     )
 
     time = models.TimeField()
+
+
+class ImportLog(models.Model):
+    filename = models.CharField(max_length=100)
+    import_datetime = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.filename

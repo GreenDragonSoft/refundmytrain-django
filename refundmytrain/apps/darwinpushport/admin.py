@@ -1,7 +1,8 @@
 from django.contrib import admin
 
 from refundmytrain.apps.darwinpushport.models import (
-    CallingPoint, OperatingCompany, Location, TimetableJourney)
+    CallingPoint, OperatingCompany, Location, TimetableJourney,
+    ImportLog)
 
 
 @admin.register(OperatingCompany)
@@ -53,3 +54,9 @@ class TimetableJourneyAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return [f.name for f in self.model._meta.fields]
+
+
+@admin.register(ImportLog)
+class ImportLogAdmin(admin.ModelAdmin):
+    list_display = ('filename', 'import_datetime')
+    search_fields = ('filename',)

@@ -1,10 +1,8 @@
 import re
-import sys
 
 import batcher
 
 from django.db import transaction
-from django.core.management.base import BaseCommand
 
 from refundmytrain.apps.darwinpushport.models import (
     OperatingCompany, Location, TimetableJourney, CallingPoint
@@ -14,44 +12,30 @@ from lxml import etree
 
 TAG_PATTERN = (r'{http://www.thalesgroup.com/rtti/XmlTimetable/v8}'
                '(?P<tag>[A-Za-z0-9]+)')
+JOURNEY_TAG = r'{http://www.thalesgroup.com/rtti/XmlTimetable/v8}Journey'
 
 CALLING_POINT_TAGS = list(CallingPoint.TYPE_CHOICES.keys())
 CANCELLATION_TAG = 'cancelReason'
 
 
-class Command(BaseCommand):
-    help = ('Imports a daily schedule file from National Rail Darwin')
+def import_schedule(f):
+    assert Location.objects.all().count()
+    assert OperatingCompany.objects.all().count()
 
-    def add_arguments(self, parser):
-        parser.add_argument('timetable_xml', type=str)
-
-    def handle(self, *args, **options):
-
-        assert Location.objects.all().count()
-        assert OperatingCompany.objects.all().count()
-
-        with open(options['timetable_xml'], 'rb') as f:
-            journies_created = load_xml_file(f, self.stdout)
-
-        self.stdout.write(self.style.SUCCESS(
-            'Created {} journies.'.format(journies_created)))
-
-
-def load_xml_file(f, stdout):
     tree = etree.parse(f)
     root = tree.getroot()
 
-    for journey_element in root:
-        make_journey_with_calling_points(journey_element, stdout)
+    for element in root:
+        if element.tag == JOURNEY_TAG:
+            make_journey_with_calling_points(element)
 
 
-def make_journey_with_calling_points(journey_element, stdout):
+def make_journey_with_calling_points(journey_element):
     with transaction.atomic():
         journey = make_journey(journey_element)
 
         if journey is None:
             return
-        stdout.write(journey.rtti_train_id)
 
         journey.calling_points.all().delete()
 
