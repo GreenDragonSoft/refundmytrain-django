@@ -52,6 +52,10 @@ class TimetableJourneyAdmin(admin.ModelAdmin):
 
     inlines = [CallingPointInline]
 
+    list_filter = (
+        'start_date',
+    )
+
     def get_readonly_fields(self, request, obj=None):
         return [f.name for f in self.model._meta.fields]
 
