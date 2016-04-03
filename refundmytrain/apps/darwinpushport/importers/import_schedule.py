@@ -12,6 +12,7 @@ from lxml import etree
 
 TAG_PATTERN = (r'{http://www.thalesgroup.com/rtti/XmlTimetable/v8}'
                '(?P<tag>[A-Za-z0-9]+)')
+JOURNEY_TAG = r'{http://www.thalesgroup.com/rtti/XmlTimetable/v8}Journey'
 
 CALLING_POINT_TAGS = list(CallingPoint.TYPE_CHOICES.keys())
 CANCELLATION_TAG = 'cancelReason'
@@ -24,8 +25,9 @@ def import_schedule(f):
     tree = etree.parse(f)
     root = tree.getroot()
 
-    for journey_element in root:
-        make_journey_with_calling_points(journey_element)
+    for element in root:
+        if element.tag == JOURNEY_TAG:
+            make_journey_with_calling_points(element)
 
 
 def make_journey_with_calling_points(journey_element):
