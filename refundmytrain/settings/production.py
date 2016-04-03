@@ -36,7 +36,7 @@ LOGGING = {
     'handlers': {
         'debug_file': {
             'level': 'DEBUG',
-            'class': 'logging.RotatingFileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'debug.log'),
             'maxBytes': 1024 * 1024 * 20,
             'backupCount': 5,
@@ -44,7 +44,7 @@ LOGGING = {
         },
         'info_file': {
             'level': 'INFO',
-            'class': 'logging.RotatingFileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'info.log'),
             'maxBytes': 1024 * 1024 * 20,
             'backupCount': 5,
@@ -52,7 +52,7 @@ LOGGING = {
         },
         'warning_file': {
             'level': 'WARN',
-            'class': 'logging.RotatingFileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'warning.log'),
             'maxBytes': 1024 * 1024 * 20,
             'backupCount': 5,
