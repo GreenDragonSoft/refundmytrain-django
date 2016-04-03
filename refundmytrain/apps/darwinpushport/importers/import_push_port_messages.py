@@ -1,3 +1,4 @@
+import logging
 
 from django.db import transaction
 
@@ -6,6 +7,8 @@ from refundmytrain.apps.darwinpushport.models import (
 )
 
 from lxml import etree
+
+LOG = logging.getLogger(__name__)
 
 UR_TAG = '{http://www.thalesgroup.com/rtti/PushPort/v12}uR'
 
@@ -85,8 +88,8 @@ def handle_train_status_location(location_element, rtti_train_id):
             continue
 
         if time_status.tag == ARRIVED_TAG:
-            print('Actually arrived at {} {}'.format(
-                tiploc, time_status.attrib['at']))
+            LOG.debug('{} actually arrived at {} {}'.format(
+                rtti_train_id, tiploc, time_status.attrib['at']))
 
             record_actual_arrival(
                 rtti_train_id, tiploc, time_status.attrib['at'],
@@ -94,12 +97,15 @@ def handle_train_status_location(location_element, rtti_train_id):
             )
 
         elif time_status.tag == DEPARTED_TAG:
-            print('Actually departed at {} {}'.format(
-                tiploc, time_status.attrib['at']))
+            LOG.debug('{} actually departed at {} {}'.format(
+                rtti_train_id, tiploc, time_status.attrib['at']))
 
         else:
-            print('{} {} {}'.format('foo', tiploc,
-                                    time_status.tag))
+            LOG.warn('unhandled <{} at="{}"> for {} at {}'.format(
+                time_status.tag,
+                time_status.attrib['at'],
+                rtti_train_id,
+                tiploc))
 
 
 def record_actual_arrival(rtti_train_id, tiploc, time, timetabled_time):
@@ -112,13 +118,13 @@ def record_actual_arrival(rtti_train_id, tiploc, time, timetabled_time):
     if timetabled_time is not None:
         kwargs['timetable_arrival_time'] = timetabled_time
 
-    print('Looking up CallingPoint({})'.format(kwargs))
-
     try:
         calling_point = CallingPoint.objects.get(**kwargs)
 
     except CallingPoint.DoesNotExist:
-        print('Failed to find CallingPoint({})'.format(kwargs))
+        # This could be because the train was a non-passenger journey.
+        # TODO: look up how to make this quieter.
+        LOG.info('Failed to find CallingPoint({})'.format(kwargs))
 
     else:
 
