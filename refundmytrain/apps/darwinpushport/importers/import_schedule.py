@@ -1,4 +1,4 @@
-import re
+import logging
 
 import batcher
 
@@ -9,6 +9,8 @@ from refundmytrain.apps.darwinpushport.models import (
 )
 
 from lxml import etree
+
+LOG = logging.getLogger(__name__)
 
 TAG_PATTERN = (r'{http://www.thalesgroup.com/rtti/XmlTimetable/v8}'
                '(?P<tag>[A-Za-z0-9]+)')
@@ -22,12 +24,39 @@ def import_schedule(f):
     assert Location.objects.all().count()
     assert OperatingCompany.objects.all().count()
 
-    tree = etree.parse(f)
-    root = tree.getroot()
+    count = 0
 
-    for element in root:
-        if element.tag == JOURNEY_TAG:
-            make_journey_with_calling_points(element)
+    for xml_chunk in split_into_journey_chunks(f):
+        element = etree.fromstring(xml_chunk)
+
+        make_journey_with_calling_points(element)
+
+        count += 1
+        if not count % 500:
+            LOG.info('Imported {} journeys'.format(count))
+
+
+def split_into_journey_chunks(f):
+    """
+    Parse through the file, yielding strings containing XML like this:
+      <Journey ...>
+      ...
+      </Journey>
+    """
+    chunk_lines = []
+    currently_mid_tag = False
+
+    for line in (line.decode('utf-8') for line in f.readlines()):
+        if line.lstrip().startswith('<Journey'):
+            currently_mid_tag = True
+
+        if currently_mid_tag:
+            chunk_lines.append(line)
+
+        if line.lstrip().startswith('</Journey'):
+            yield ''.join(chunk_lines).encode('utf-8')
+            chunk_lines = []
+            currently_mid_tag = False
 
 
 def make_journey_with_calling_points(journey_element):
@@ -123,9 +152,10 @@ def make_calling_point(element, journey, bulk_create_queue):
 
 
 def get_element_tag(element):
-    match = re.match(TAG_PATTERN, element.tag)
+    # match = re.match(TAG_PATTERN, element.tag)
 
-    if match is None:
-        raise ValueError("Tag doesn't match expected format: `{}`, "
-                         "format: {}".format(element.tag, TAG_PATTERN))
-    return match.group('tag')
+    # if match is None:
+    #     raise ValueError("Tag doesn't match expected format: `{}`, "
+    #                      "format: {}".format(element.tag, TAG_PATTERN))
+    # return match.group('tag')
+    return element.tag
