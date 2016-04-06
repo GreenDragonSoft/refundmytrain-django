@@ -6,6 +6,8 @@ from collections import OrderedDict
 import six
 
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 from django.utils.timezone import make_aware
 
 LOG = logging.getLogger(__name__)
@@ -192,3 +194,19 @@ class ImportLog(models.Model):
 
     def __str__(self):
         return self.filename
+
+
+@receiver(pre_save)
+def update_datetimes_from_times(sender, instance, **kwargs):
+    if sender == CallingPoint:
+        instance.timetable_arrival_datetime = (
+            instance.journey.time_to_datetime(instance.timetable_arrival_time))
+        instance.timetable_departure_datetime = (
+            instance.journey.time_to_datetime(
+                instance.timetable_departure_time))
+
+    elif sender == ActualArrival:
+        instance.datetime = (
+            instance.timetabled_calling_point.journey.time_to_datetime(
+                instance.time)
+        )
