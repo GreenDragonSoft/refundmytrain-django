@@ -143,8 +143,11 @@ class CallingPoint(models.Model):
         choices=TYPE_CHOICES.items()
     )
 
-    timetable_arrival_time = models.TimeField(null=True)    # TODO: remove me
-    timetable_departure_time = models.TimeField(null=True)  # TODO: remove me
+    # TODO: explain why these `_time` fields are kept
+    # A calling point may not have an arrival or a departure (if its an origin
+    # or destination calling point) so these must be nullable.
+    timetable_arrival_time = models.TimeField(null=True)
+    timetable_departure_time = models.TimeField(null=True)
     timetable_arrival_datetime = models.DateTimeField(null=True)
     timetable_departure_datetime = models.DateTimeField(null=True)
 
@@ -179,8 +182,8 @@ class ActualArrival(models.Model):
         related_name='actual_arrival_time',
     )
 
-    time = models.TimeField()  # TODO: delete this field
-    datetime = models.DateTimeField(null=True)  # TODO: make non-null
+    time = models.TimeField()  # TODO: explain why this field is retaiend
+    datetime = models.DateTimeField()
 
 
 class ImportLog(models.Model):
