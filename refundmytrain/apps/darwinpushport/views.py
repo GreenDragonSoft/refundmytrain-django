@@ -23,12 +23,9 @@ class TimetableJourneyList(ListView):
         LOG.info('{} recent journeys'.format(recent_journeys.count()))
 
         recent_late_journeys = recent_journeys.filter(
-            calling_points__actual_arrival_time__time__gte=(
-                F('calling_points__timetable_arrival_time') +
-                datetime.timedelta(minutes=30))
-        ).distinct()
+                calling_points__actual_arrival_time__isnull=False).distinct()
 
-        return recent_late_journeys.order_by('start_date')
+        return recent_late_journeys.order_by('start_date')[0:10]
 
 
 class TimetableJourneyDetail(DetailView):
