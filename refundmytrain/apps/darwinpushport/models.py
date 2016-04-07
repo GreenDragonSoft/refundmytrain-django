@@ -1,8 +1,16 @@
+import logging
 import datetime
 
 from collections import OrderedDict
 
+import six
+
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+from django.utils.timezone import make_aware
+
+LOG = logging.getLogger(__name__)
 
 
 class OperatingCompany(models.Model):
@@ -83,23 +91,32 @@ class TimetableJourney(models.Model):
         return self.calling_points.all().count()
 
     def start(self):
-        return self.calling_points.all().order_by('id')[0]
+        return self.calling_points.all().order_by('id').first()
 
     def end(self):
-        return self.calling_points.all().order_by('id').reverse()[0]
+        return self.calling_points.all().order_by('id').last()
 
-    @property
-    def earliest_possible_event(self):
+    def time_to_datetime(self, time):
         """
-        Return the earliest possible datetime for an event happening on this
-        journey. Effectively this is the time at which the day flips: we're
-        saying 4am on the day of the journey is the earliest. This helps
-        to categorise events after midnight to the correct day.
+        For example if a train has a start date of 2nd April, a time of 01:00
+        is going to be the next day (3rd April)
         """
-        return datetime.datetime.combine(
-            self.start_date,
-            datetime.time(4)
-        )
+        if isinstance(time, six.string_types):
+            hour, minute = time.split(':')
+            time = datetime.time(int(hour), int(minute))
+
+        assert isinstance(time, datetime.time)
+
+        if time.hour in [0, 1, 2, 3]:
+            # if it's between midnight and 4am it's got to be the day *after*
+            # the train was scheduled to begin
+            day = self.start_date + datetime.timedelta(days=1)
+        else:
+            day = self.start_date
+
+        combined = make_aware(datetime.datetime.combine(day, time))
+        LOG.debug('{} + {} = {}'.format(self.start_date, time, combined))
+        return combined
 
 
 class CallingPoint(models.Model):
@@ -128,34 +145,20 @@ class CallingPoint(models.Model):
         choices=TYPE_CHOICES.items()
     )
 
+    # TODO: explain why these `_time` fields are kept
+    # A calling point may not have an arrival or a departure (if its an origin
+    # or destination calling point) so these must be nullable.
     timetable_arrival_time = models.TimeField(null=True)
     timetable_departure_time = models.TimeField(null=True)
+    timetable_arrival_datetime = models.DateTimeField(null=True)
+    timetable_departure_datetime = models.DateTimeField(null=True)
 
-    @property
-    def timetable_arrival_datetime(self):
-        return self.combine_date_time(self.timetable_arrival_time)
-
-    @property
     def actual_arrival_datetime(self):
-        return self.combine_date_time(self.actual_arrival_time.time)
-
-    def combine_date_time(self, time):
-        """
-        For example if a train has a start date of 2nd April, a time of 01:00
-        is going to be the next day (3rd April)
-        """
-
-        possible_datetime = datetime.datetime.combine(
-            self.journey.start_date, time)
-
-        if possible_datetime < self.journey.earliest_possible_event:
-            return possible_datetime + datetime.timedelta(hours=24)
-
-        else:
-            return possible_datetime
+        actual_arrival = self.actual_arrival_time
+        return actual_arrival.datetime if actual_arrival else None
 
     def late_text(self):
-        actual = self.actual_arrival_datetime
+        actual = self.actual_arrival_datetime()
         timetabled = self.timetable_arrival_datetime
 
         if actual is None:
@@ -181,7 +184,8 @@ class ActualArrival(models.Model):
         related_name='actual_arrival_time',
     )
 
-    time = models.TimeField()
+    time = models.TimeField()  # TODO: explain why this field is retaiend
+    datetime = models.DateTimeField()
 
 
 class ImportLog(models.Model):
@@ -190,3 +194,19 @@ class ImportLog(models.Model):
 
     def __str__(self):
         return self.filename
+
+
+@receiver(pre_save)
+def update_datetimes_from_times(sender, instance, **kwargs):
+    if sender == CallingPoint:
+        instance.timetable_arrival_datetime = (
+            instance.journey.time_to_datetime(instance.timetable_arrival_time))
+        instance.timetable_departure_datetime = (
+            instance.journey.time_to_datetime(
+                instance.timetable_departure_time))
+
+    elif sender == ActualArrival:
+        instance.datetime = (
+            instance.timetabled_calling_point.journey.time_to_datetime(
+                instance.time)
+        )
