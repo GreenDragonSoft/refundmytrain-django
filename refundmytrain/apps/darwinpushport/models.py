@@ -91,10 +91,10 @@ class TimetableJourney(models.Model):
         return self.calling_points.all().count()
 
     def start(self):
-        return self.calling_points.all().order_by('id')[0]
+        return self.calling_points.all().order_by('id').first()
 
     def end(self):
-        return self.calling_points.all().order_by('id').reverse()[0]
+        return self.calling_points.all().order_by('id').last()
 
     def time_to_datetime(self, time):
         """
