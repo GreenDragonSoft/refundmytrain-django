@@ -17,12 +17,18 @@ from django.conf.urls import url
 from .views import (
     TimetableJourneyList, TimetableJourneyDetail
 )
+from . import views
+
 
 urlpatterns = [
 
     url(r'^$',
         TimetableJourneyList.as_view(),
         name='journey-list'),
+
+    url(r'^(?P<from>[a-z]{3})/(?P<to>[a-z]{3})/$',
+        views.TimetableJourneyListFromTo.as_view(),
+        name='journey-list-from-to'),
 
     url(r'^journey/(?P<pk>\d{15})/$',
         TimetableJourneyDetail.as_view(),

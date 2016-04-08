@@ -7,7 +7,7 @@
   <h2>They may be late, they not, we're not live yet!</h2>
 
   <ul class="recent-late-trains">
-    {% for journey in object_list %}
+    {% for journey in journeys %}
     <li class="list-group-item">
       <a href="{% url 'journey-detail' pk=journey %}">
         <span class="timetable-time">{{ journey.start.timetable_departure_time|time }}</span>
