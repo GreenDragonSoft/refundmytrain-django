@@ -161,10 +161,7 @@ class CallingPoint(models.Model):
         actual = self.actual_arrival_datetime()
         timetabled = self.timetable_arrival_datetime
 
-        if actual is None:
-            return None
-
-        if actual <= timetabled:
+        if actual is None or timetabled is None or actual <= timetabled:
             return None
 
         mins_late = int((actual - timetabled).total_seconds() / 60)
