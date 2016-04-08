@@ -14,3 +14,7 @@ load:
 .PHONY: runserver
 runserver:
 	./manage.py runserver 0.0.0.0:8001
+
+.PHONY: backup
+backup:
+	pg_dumpall > "backup_$(shell date --rfc-3339=seconds).sql"
