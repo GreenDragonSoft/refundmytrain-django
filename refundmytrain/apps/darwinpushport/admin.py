@@ -2,7 +2,8 @@ from django.contrib import admin
 
 from refundmytrain.apps.darwinpushport.models import (
     CallingPoint, OperatingCompany, Location, TimetableJourney,
-    ImportLog)
+    ImportLog, JourneyFromTo
+)
 
 
 @admin.register(OperatingCompany)
@@ -58,6 +59,17 @@ class TimetableJourneyAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return [f.name for f in self.model._meta.fields]
+
+
+@admin.register(JourneyFromTo)
+class JourneyFromToAdmin(admin.ModelAdmin):
+    list_display = ('from_location', 'to_location', 'num_journeys')
+    search_fields = (
+        'from_location__three_alpha',
+        'to_location__three_alpha',
+        'from_location__name',
+        'to_location__name',
+    )
 
 
 @admin.register(ImportLog)
