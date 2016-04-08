@@ -1,3 +1,4 @@
+import itertools
 import logging
 
 import batcher
@@ -5,7 +6,7 @@ import batcher
 from django.db import transaction
 
 from refundmytrain.apps.darwinpushport.models import (
-    OperatingCompany, Location, TimetableJourney, CallingPoint
+    OperatingCompany, Location, TimetableJourney, CallingPoint, JourneyFromTo
 )
 
 from lxml import etree
@@ -80,6 +81,21 @@ def make_journey_with_calling_points(journey_element):
                 else:
                     raise ValueError('Tag `{}` not in {}'.format(
                         get_element_tag(element), CALLING_POINT_TAGS))
+
+        ordered_locations = (
+            cp.location
+            for cp in journey.calling_points.select_related(
+                'location')
+        )
+
+        for from_location, to_location in itertools.combinations(
+                ordered_locations, 2):
+            obj, _ = JourneyFromTo.objects.get_or_create(
+                from_location=from_location,
+                to_location=to_location,
+            )
+
+            obj.journeys.add(journey)
 
 
 def make_journey(element):

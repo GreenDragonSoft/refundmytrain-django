@@ -175,6 +175,31 @@ class CallingPoint(models.Model):
         return self.location.name
 
 
+class JourneyFromTo(models.Model):
+    """
+    from_to =  JourneyFromTo.objects.get(
+            from_location__three_alpha='LIV',
+            to_location__three_alpha='MCV',
+        )
+    journeys = from_to.journeys
+    """
+
+    class Meta:
+        index_together = (
+            ('from_location', 'to_location'),
+        )
+        unique_together = (
+            ('from_location', 'to_location'),
+        )
+
+    from_location = models.ForeignKey(Location, related_name='+')
+    to_location = models.ForeignKey(Location, related_name='+')
+    journeys = models.ManyToManyField(TimetableJourney, related_name='+')
+
+    def num_journeys(self):
+        return self.journeys.count()
+
+
 class ActualArrival(models.Model):
     timetabled_calling_point = models.OneToOneField(
         CallingPoint,
