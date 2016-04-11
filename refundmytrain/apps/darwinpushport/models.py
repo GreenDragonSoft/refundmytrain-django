@@ -98,6 +98,12 @@ class TimetableJourney(models.Model):
         default=0
     )
 
+    late_reason = models.CharField(
+        max_length=3,
+        null=True,
+        blank=True
+    )
+
     objects = TimetableJourneyManager()
 
     def __str__(self):

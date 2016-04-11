@@ -134,10 +134,15 @@ def handle_train_status(ts_element):
             handle_train_status_location(sub, journey)
 
         elif full_tag == LATE_REASON_TAG:
-            pass
+            handle_late_reason_tag(sub, journey)
 
         else:
             raise NotImplementedError(full_tag)
+
+
+def handle_late_reason_tag(late_reason_tag, journey):
+    journey.late_reason = late_reason_tag.text.strip()
+    journey.save()
 
 
 def handle_train_status_location(location_element, journey):
