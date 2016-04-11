@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 
 from refundmytrain.apps.darwinpushport.models import (
-    ActualArrival, OperatingCompany, Location, CallingPoint
+    ActualArrival, OperatingCompany, Location, CallingPoint, TimetableJourney
 )
 
 from lxml import etree
@@ -72,10 +72,20 @@ def handle_train_status(ts_element):
             handle_train_status_location(sub, rtti_train_id)
 
         elif full_tag == LATE_REASON_TAG:
-            pass
+            handle_late_reason_tag(sub, rtti_train_id)
 
         else:
             raise NotImplementedError(full_tag)
+
+
+def handle_late_reason_tag(late_reason_tag, rtti_train_id):
+    try:
+        journey = TimetableJourney.objects.get(rtti_train_id=rtti_train_id)
+    except TimetableJourney.DoesNotExist:
+        LOG.warning('Failed to find journey {}'.format(rtti_train_id))
+    else:
+        journey.late_reason = late_reason_tag.text.strip()
+        journey.save()
 
 
 def handle_train_status_location(location_element, rtti_train_id):

@@ -84,6 +84,12 @@ class TimetableJourney(models.Model):
         blank=True
     )
 
+    late_reason = models.CharField(
+        max_length=3,
+        null=True,
+        blank=True
+    )
+
     def __str__(self):
         return '{}'.format(self.rtti_train_id)
 

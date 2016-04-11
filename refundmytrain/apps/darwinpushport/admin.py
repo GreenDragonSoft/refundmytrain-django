@@ -44,6 +44,7 @@ class TimetableJourneyAdmin(admin.ModelAdmin):
         'num_calling_points',
         'train_uid',
         'train_id',
+        'late_reason',
     )
 
     search_fields = (
@@ -55,6 +56,7 @@ class TimetableJourneyAdmin(admin.ModelAdmin):
 
     list_filter = (
         'start_date',
+        'late_reason',
     )
 
     def get_readonly_fields(self, request, obj=None):
