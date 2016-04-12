@@ -1,6 +1,8 @@
 import itertools
 import logging
 
+from collections import defaultdict
+
 import batcher
 
 from django.db import transaction
@@ -20,21 +22,117 @@ JOURNEY_TAG = r'{http://www.thalesgroup.com/rtti/XmlTimetable/v8}Journey'
 CALLING_POINT_TAGS = list(CallingPoint.TYPE_CHOICES.keys())
 CANCELLATION_TAG = 'cancelReason'
 
+LOG_EVERY = 500
+
 
 def import_schedule(f):
     assert Location.objects.all().count()
     assert OperatingCompany.objects.all().count()
 
-    count = 0
+    journey_cache = {}
+
+    def _create_new_journeys(journey_cache):
+        existing_journey_ids = get_existing_journey_ids()
+
+        LOG.info('Attempting to load {} journeys. Database contains {} '
+                 'existing journeys'.format(
+                     sum(1 for _ in get_journey_elements(f)),
+                     len(existing_journey_ids)))
+
+        for journey in bulk_create_new_journeys(
+                get_journey_elements(f), existing_journey_ids):
+            journey_cache[journey.rtti_train_id] = journey
+
+        LOG.info('Bulk created {} new journeys.'.format(len(journey_cache)))
+
+    def _load_remaining_journeys(journey_cache):
+        for journey in load_existing_journeys(get_journey_elements(f)):
+            journey_cache[journey.rtti_train_id] = journey
+
+        LOG.info('Cache now contains {} journeys.'.format(len(journey_cache)))
+        assert None not in set(journey_cache.values())
+
+    def _delete_existing_calling_points(journeys):
+        count = 0
+        for journey in journeys:
+            journey.calling_points.all().delete()
+            count += 1
+            if count % LOG_EVERY == 0:
+                LOG.info('Deleted calling points for {} journeys'.format(
+                    count))
+
+    def _insert_calling_points(journey_cache):
+        from_to_entries = defaultdict(list)
+
+        for (loc_from, loc_to), journey in bulk_insert_calling_points(
+                get_journey_elements(f), journey_cache):
+            from_to_entries[(loc_from, loc_to)].append(journey)
+        return from_to_entries
+
+    def _update_journey_from_tos(from_to_entries):
+        LOG.info('Updating {} JourneyFromTo entries.'.format(
+            len(from_to_entries)))
+
+        update_search_entries(from_to_entries)
+
+    LOG.info('Loading...')
+
+    with transaction.atomic():
+        _create_new_journeys(journey_cache)
+        _load_remaining_journeys(journey_cache)
+        _delete_existing_calling_points(journey_cache.values())
+        new_from_to_entries = _insert_calling_points(journey_cache)
+
+    del journey_cache
+    _update_journey_from_tos(new_from_to_entries)
+
+
+def get_journey_elements(f):
+    f.seek(0)
 
     for xml_chunk in split_into_journey_chunks(f):
         element = etree.fromstring(xml_chunk)
 
-        make_journey_with_calling_points(element)
+        assert 'Journey' == get_element_tag(element), (
+            'Unexpected Journey tag: `{}`'.format(element.tag))
 
-        count += 1
-        if not count % 500:
-            LOG.info('Imported {} journeys'.format(count))
+        if element.attrib.get('isPassengerSvc', None) == 'false':
+            continue  # Don't load commercial services
+
+        # if element.attrib.get('toc') != 'LM':
+        #     continue  # NOTE: We're only doing London Midland to start
+
+        yield element
+
+
+def get_existing_journey_ids():
+    return set(j.rtti_train_id for j in TimetableJourney.objects.all())
+
+
+def bulk_create_new_journeys(journey_elements, ignore_rtti_ids):
+
+    with batcher.batcher(TimetableJourney.objects.bulk_create) as b:
+        for element in journey_elements:
+
+            if element.attrib['rid'] in ignore_rtti_ids:
+                continue
+
+            journey = TimetableJourney(**{
+                'rtti_train_id': element.attrib['rid'],
+                'train_uid': element.attrib['uid'],
+                'train_id': element.attrib['trainId'],
+                'start_date': element.attrib['ssd'],
+                'operating_company': OperatingCompany.objects.get(
+                    atoc_code=element.attrib['toc']),  # TODO: cache
+            })
+            b.push(journey)
+            yield journey
+
+
+def load_existing_journeys(journey_elements):
+    for element in journey_elements:
+        yield TimetableJourney.objects.get(
+            rtti_train_id=element.attrib['rid'])
 
 
 def split_into_journey_chunks(f):
@@ -60,65 +158,44 @@ def split_into_journey_chunks(f):
             currently_mid_tag = False
 
 
-def make_journey_with_calling_points(journey_element):
-    with transaction.atomic():
-        journey = make_journey(journey_element)
+def bulk_insert_calling_points(journey_elements, journey_cache):
+    """
+    Attach calling points for journeys and yield JourneyFromTo search entries
+    like (('LIV', 'MAN'), Journey)
+    """
 
-        if journey is None:
-            return
+    location_cache = {l.tiploc: l for l in Location.objects.all()}
 
-        journey.calling_points.all().delete()
+    journey_count = 0
 
-        with batcher.batcher(CallingPoint.objects.bulk_create) as b:
+    with batcher.batcher(CallingPoint.objects.bulk_create) as b:
+        for journey_element in journey_elements:
+            journey = journey_cache[journey_element.attrib['rid']]
+            calling_points = []
+
             for element in journey_element:
-
                 if get_element_tag(element) in CALLING_POINT_TAGS:
-                    make_calling_point(element, journey, b)
+                    calling_point = make_calling_point(
+                        element, journey, location_cache)
 
-                elif get_element_tag(element) == CANCELLATION_TAG:
-                    handle_cancellation_element(element, journey)
+                    if calling_point:
+                        calling_points.append(calling_point)
 
-                else:
-                    raise ValueError('Tag `{}` not in {}'.format(
-                        get_element_tag(element), CALLING_POINT_TAGS))
+            for calling_point in calling_points:
+                b.push(calling_point)
 
-        ordered_locations = (
-            cp.location
-            for cp in journey.calling_points.select_related(
-                'location')
-        )
+            for from_cp, to_cp in itertools.combinations(
+                    calling_points, 2):
+                yield ((from_cp.location, to_cp.location), journey)
 
-        for from_location, to_location in itertools.combinations(
-                ordered_locations, 2):
-            obj, _ = JourneyFromTo.objects.get_or_create(
-                from_location=from_location,
-                to_location=to_location,
-            )
+            journey_count += 1
 
-            obj.journeys.add(journey)
+            if journey_count % LOG_EVERY == 0:
+                LOG.info('Added CallingPoints for {} journeys'.format(
+                    journey_count))
 
 
-def make_journey(element):
-    assert 'Journey' == get_element_tag(element), (
-        'Unexpected Journey tag: `{}`'.format(element.tag))
-
-    if element.attrib.get('isPassengerSvc', None) == 'false':
-        return  # Don't load commercial services
-
-    journey, created = TimetableJourney.objects.get_or_create(
-        rtti_train_id=element.attrib['rid'],
-        defaults={
-            'train_uid': element.attrib['uid'],
-            'train_id': element.attrib['trainId'],
-            'start_date': element.attrib['ssd'],
-            'operating_company': OperatingCompany.objects.get(
-                atoc_code=element.attrib['toc']),
-        }
-    )
-    return journey
-
-
-def parse_calling_point_element(element):
+def make_calling_point(element, journey, location_cache):
     """
     <OR tpl="DORKING" act="TB" plat="2" ptd="20:59" wtd="20:59" />
     <IP tpl="BOXHAWH" act="T " plat="1" pta="21:02" ptd="21:02" wta="21:01:30"
@@ -129,42 +206,23 @@ def parse_calling_point_element(element):
 
     timetable_arrival = element.attrib.get('pta', None)
     timetable_departure = element.attrib.get('ptd', None)
-    location = Location.objects.get(
-        tiploc=element.attrib['tpl'],
-    )
+    location = location_cache[element.attrib['tpl']]
 
     if timetable_departure is None and timetable_arrival is None:
         return None  # not helpful, discard
 
-    # if location.three_alpha is None:
-    #     return None  # not a public location
-
-    return {
+    return CallingPoint(**{
+        'journey': journey,
         'location': location,
         'calling_point_type': get_element_tag(element),
         'timetable_arrival_time': timetable_arrival,
         'timetable_departure_time': timetable_departure,
-    }
+    })
 
 
 def handle_cancellation_element(element, journey):
     journey.cancellation_reason = element.text
     journey.save()
-
-
-def make_calling_point(element, journey, bulk_create_queue):
-
-    calling_point_dict = parse_calling_point_element(element)
-
-    if calling_point_dict is None:
-        return
-
-    bulk_create_queue.push(
-        CallingPoint(
-            journey=journey,
-            **calling_point_dict
-        )
-    )
 
 
 def get_element_tag(element):
@@ -175,3 +233,21 @@ def get_element_tag(element):
     #                      "format: {}".format(element.tag, TAG_PATTERN))
     # return match.group('tag')
     return element.tag
+
+
+def update_search_entries(journey_from_tos):
+    count = 0
+    for (from_location, to_location), journeys in journey_from_tos.items():
+        obj, _ = JourneyFromTo.objects.get_or_create(
+            from_location=from_location,
+            to_location=to_location,
+        )
+
+        existing_journeys = set(obj.journeys.all())
+        existing_journeys.update(set(journeys))
+
+        obj.journeys.set(existing_journeys)
+
+        count += 1
+        if count % LOG_EVERY == 0:
+            LOG.info('Updated {} JourneyFromTo entries'.format(count))
