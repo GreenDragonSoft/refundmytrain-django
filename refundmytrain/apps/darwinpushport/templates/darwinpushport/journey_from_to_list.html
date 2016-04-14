@@ -1,0 +1,33 @@
+{% extends 'refundmytrain/base.html' %}
+
+{% block content %}
+
+<div class="container">
+  <h1>{{ from_name }} to {{ to_name }}</h1>
+
+  {% for date, journeys in journeys_by_date %}
+    <h2>{{ date|date }}</h2>
+
+    <ul class="recent-late-trains">
+      {% for result in journeys %}
+      <li class="list-group-item">
+        <a href="{% url 'journey-detail' pk=result.journey_rtti_train_id %}">
+          <span class="timetable-time">{{ result.from_calling_point.timetable_departure_time|time }}</span>
+          <span>{{ result.from_calling_point.location.name }}</span>
+          <br>
+          <span class="timetable-time">{{ result.to_calling_point.timetable_arrival_time|time }}</span>
+          <span>{{ result.to_calling_point.location.name }}</span>
+          <br>
+          <span class="service-description">
+            {{ result.operating_company.name }}</span>
+            service from {{ result.start_location.name }} to {{ result.end_location.name }}
+          </span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+</div>
+
+
+{% endblock %}

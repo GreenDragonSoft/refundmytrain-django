@@ -25,11 +25,21 @@ ul.recent-late-trains {
   padding: 0;
 }
 
+ul.recent-late-trains li.list-group-item {
+  padding: 0;
+}
+
 ul.recent-late-trains li a {
   display: block;
   color: black;
+  padding: 10px 15px 10px 15px;
 }
 
-ul.recent-late-trains span.operating-company, span.date {
+ul.recent-late-trains li a:hover {
+  background-color: rgb(24, 188, 156);
+  text-decoration: none;
+}
+
+ul.recent-late-trains span.operating-company, span.date, service-description {
   font-size: 70%;
 }
