@@ -10,15 +10,13 @@
   <table class="table table-condensed table-striped">
     <thead>
       <tr>
-        <th></th>
         <th>Arrival</th>
+        <th></th>
         <th>Departure</th>
       </tr>
     <tbody>
     {% for loc in journey.calling_points.all %}
     <tr>
-      <td>{{ loc.location.name }}</td>
-
       <td>
         {% if not loc.actual_arrival_time %}
 
@@ -42,6 +40,8 @@
 
         {% endif %}
       </td>
+
+      <td>{{ loc.location.name }}</td>
 
       <td>
         <span class="timetable-time">{{ loc.timetable_departure_time|time|default:'-' }}</span>
