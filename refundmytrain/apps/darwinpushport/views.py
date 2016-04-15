@@ -18,7 +18,8 @@ class TimetableJourneyList(ListView):
     def get_queryset(self):
         journeys = TimetableJourney.objects.filter(
             start_date__lte=datetime.date.today(),
-            start_date__gte=datetime.date.today() - datetime.timedelta(days=7)
+            start_date__gte=datetime.date.today() - datetime.timedelta(days=7),
+            maximum_minutes_late__gte=30,
         )
 
         return journeys.order_by('start_date')[0:10]
