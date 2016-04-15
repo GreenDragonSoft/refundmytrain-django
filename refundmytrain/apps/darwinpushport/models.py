@@ -98,6 +98,12 @@ class TimetableJourney(models.Model):
         default=0
     )
 
+    late_reason = models.CharField(
+        max_length=3,
+        null=True,
+        blank=True
+    )
+
     objects = TimetableJourneyManager()
 
     def __str__(self):
@@ -254,6 +260,25 @@ class ImportLog(models.Model):
 
     def __str__(self):
         return self.filename
+
+
+class ReasonModel(models.Model):
+    class Meta:
+        abstract = True
+
+    code = models.CharField(
+        primary_key=True,
+        max_length=3)
+
+    text = models.CharField(max_length=256)
+
+
+class CancellationReason(ReasonModel):
+    pass
+
+
+class LateRunningReason(ReasonModel):
+    pass
 
 
 @receiver(pre_save)
