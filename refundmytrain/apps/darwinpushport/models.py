@@ -49,6 +49,12 @@ class Location(models.Model):
         )
 
 
+class TimetableJourneyManager(models.Manager):
+    def get_queryset(self):
+        return super(TimetableJourneyManager, self) \
+            .get_queryset().select_related('operating_company')
+
+
 class TimetableJourney(models.Model):
     """
     Roughly matches the `Journey` field defined in the Darwin schedule file.
@@ -83,6 +89,8 @@ class TimetableJourney(models.Model):
         null=True,
         blank=True
     )
+
+    objects = TimetableJourneyManager()
 
     def __str__(self):
         return '{}'.format(self.rtti_train_id)
@@ -119,6 +127,12 @@ class TimetableJourney(models.Model):
         return combined
 
 
+class CallingPointManager(models.Manager):
+    def get_queryset(self):
+        return super(CallingPointManager, self) \
+            .get_queryset().select_related('location')
+
+
 class CallingPoint(models.Model):
     TYPE_CHOICES = OrderedDict((
         ('OR', 'Passenger Origin'),
@@ -152,6 +166,8 @@ class CallingPoint(models.Model):
     timetable_departure_time = models.TimeField(null=True)
     timetable_arrival_datetime = models.DateTimeField(null=True)
     timetable_departure_datetime = models.DateTimeField(null=True)
+
+    objects = CallingPointManager()
 
     def actual_arrival_datetime(self):
         actual_arrival = self.actual_arrival_time
