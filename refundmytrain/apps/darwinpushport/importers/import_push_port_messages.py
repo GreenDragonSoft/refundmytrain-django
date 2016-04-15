@@ -1,3 +1,30 @@
+# Example:
+#
+# <Pport xmlns="http://www.thalesgroup.com/rtti/PushPort/v12"
+#        xmlns:ns3="http://www.thalesgroup.com/rtti/PushPort/Forecasts/v2"
+#        ts="2016-04-01T11:46:00.7543769+01:00" version="12.0">
+#   <uR updateOrigin="Darwin">
+#     <TS rid="201604010562730" ssd="2016-04-01" uid="G23691">
+#       <ns3:LateReason>124</ns3:LateReason>
+#       <ns3:Location pta="11:23" ptd="11:28" tpl="STOKEOT" wta="11:23"
+#                     wtd="11:28">
+#         <ns3:arr at="11:22" src="TD"/>
+#         <ns3:dep delayed="true" et="11:46" src="Darwin"/>
+#         <ns3:plat>1</ns3:plat>
+#       </ns3:Location>
+#       <ns3:Location tpl="STOKOTJ" wtp="11:29">
+#         <ns3:pass delayed="true" et="11:47" src="Darwin"/>
+#       </ns3:Location>
+#       <ns3:Location pta="11:36" ptd="11:36" tpl="STONE" wta="11:35:30"
+#                     wtd="11:36:30">
+#         <ns3:arr delayed="true" et="11:53" src="Darwin"/>
+#         <ns3:dep delayed="true" et="11:53" src="Darwin"/>
+#         <ns3:plat>2</ns3:plat>
+#       </ns3:Location>
+#     </TS>
+#   </uR>
+# </Pport>
+
 import logging
 
 from django.db import transaction
@@ -65,6 +92,30 @@ def load_journies_from_xml_file(xml_string):
 
 
 def handle_train_status(ts_element):
+    """
+    A train status tag will have a number of subelements such as Location,
+    LateReason etc:
+
+    <TS rid="201604010562730" ssd="2016-04-01" uid="G23691">
+      <ns3:LateReason>124</ns3:LateReason>
+      <ns3:Location pta="11:23" ptd="11:28" tpl="STOKEOT" wta="11:23"
+                    wtd="11:28">
+        <ns3:arr at="11:22" src="TD"/>
+        <ns3:dep delayed="true" et="11:46" src="Darwin"/>
+        <ns3:plat>1</ns3:plat>
+      </ns3:Location>
+      <ns3:Location tpl="STOKOTJ" wtp="11:29">
+        <ns3:pass delayed="true" et="11:47" src="Darwin"/>
+      </ns3:Location>
+      <ns3:Location pta="11:36" ptd="11:36" tpl="STONE" wta="11:35:30"
+                    wtd="11:36:30">
+        <ns3:arr delayed="true" et="11:53" src="Darwin"/>
+        <ns3:dep delayed="true" et="11:53" src="Darwin"/>
+        <ns3:plat>2</ns3:plat>
+      </ns3:Location>
+    </TS>
+    """
+
     rtti_train_id = ts_element.attrib['rid']
     # start_date = ts_element.attrib['ssd']
     # uid = ts_element.attrib['uid']
