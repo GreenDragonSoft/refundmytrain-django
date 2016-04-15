@@ -67,8 +67,6 @@ class JourneyFromToAdmin(admin.ModelAdmin):
     search_fields = (
         'from_location__three_alpha',
         'to_location__three_alpha',
-        'from_location__name',
-        'to_location__name',
     )
 
 
