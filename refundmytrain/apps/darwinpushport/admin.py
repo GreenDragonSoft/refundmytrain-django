@@ -1,8 +1,8 @@
 from django.contrib import admin
 
 from refundmytrain.apps.darwinpushport.models import (
-    CallingPoint, OperatingCompany, Location, TimetableJourney,
-    ImportLog, JourneyFromTo
+    CancellationReason, CallingPoint, OperatingCompany, LateRunningReason,
+    Location, TimetableJourney, ImportLog, JourneyFromTo
 )
 
 
@@ -135,3 +135,10 @@ class JourneyFromToAdmin(admin.ModelAdmin):
 class ImportLogAdmin(admin.ModelAdmin):
     list_display = ('filename', 'import_datetime')
     search_fields = ('filename',)
+
+
+@admin.register(CancellationReason)
+@admin.register(LateRunningReason)
+class ReasonAdmin(admin.ModelAdmin):
+    list_display = ('code', 'text')
+    search_fields = list_display

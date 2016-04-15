@@ -262,6 +262,25 @@ class ImportLog(models.Model):
         return self.filename
 
 
+class ReasonModel(models.Model):
+    class Meta:
+        abstract = True
+
+    code = models.CharField(
+        primary_key=True,
+        max_length=3)
+
+    text = models.CharField(max_length=256)
+
+
+class CancellationReason(ReasonModel):
+    pass
+
+
+class LateRunningReason(ReasonModel):
+    pass
+
+
 @receiver(pre_save)
 def update_datetimes_from_times(sender, instance, **kwargs):
     if sender == CallingPoint:
