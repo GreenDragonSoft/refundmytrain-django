@@ -117,6 +117,13 @@ def handle_train_status(ts_element):
     """
 
     rtti_train_id = ts_element.attrib['rid']
+    try:
+        journey = TimetableJourney.objects.get(rtti_train_id=rtti_train_id)
+    except TimetableJourney.DoesNotExist:
+        LOG.info('No such train {} (maybe non-passenger?)'.format(
+            rtti_train_id))
+        return
+
     # start_date = ts_element.attrib['ssd']
     # uid = ts_element.attrib['uid']
 
@@ -124,7 +131,7 @@ def handle_train_status(ts_element):
         full_tag = sub.tag
 
         if full_tag == LOCATION_TAG:
-            handle_train_status_location(sub, rtti_train_id)
+            handle_train_status_location(sub, journey)
 
         elif full_tag == LATE_REASON_TAG:
             pass
@@ -133,14 +140,7 @@ def handle_train_status(ts_element):
             raise NotImplementedError(full_tag)
 
 
-def handle_train_status_location(location_element, rtti_train_id):
-    try:
-        journey = TimetableJourney.objects.get(rtti_train_id=rtti_train_id)
-    except TimetableJourney.DoesNotExist:
-        LOG.info('No such train {} (maybe non-passenger?)'.format(
-            rtti_train_id))
-        return
-
+def handle_train_status_location(location_element, journey):
     tiploc = location_element.attrib['tpl']
     timetable_arrival_time = location_element.attrib.get('pta', None)
     # timetable_departure_time = location_element.attrib.get('ptd', None)
@@ -153,16 +153,16 @@ def handle_train_status_location(location_element, rtti_train_id):
 
         if time_status.tag == ARRIVED_TAG:
             LOG.debug('{} actually arrived at {} {}'.format(
-                rtti_train_id, tiploc, time_status.attrib['at']))
+                journey.rtti_train_id, tiploc, time_status.attrib['at']))
 
             minutes_late.add(record_actual_arrival(
-                rtti_train_id, tiploc, time_status.attrib['at'],
+                journey, tiploc, time_status.attrib['at'],
                 timetable_arrival_time
             ))
 
         elif time_status.tag == DEPARTED_TAG:
             LOG.debug('{} actually departed at {} {}'.format(
-                rtti_train_id, tiploc, time_status.attrib['at']))
+                journey.rtti_train_id, tiploc, time_status.attrib['at']))
 
         elif time_status.tag == PASS_TAG:
             pass
@@ -171,23 +171,23 @@ def handle_train_status_location(location_element, rtti_train_id):
             LOG.warn('unhandled <{} at="{}"> for {} at {}'.format(
                 time_status.tag,
                 time_status.attrib['at'],
-                rtti_train_id,
+                journey.rtti_train_id,
                 tiploc))
 
     if len(minutes_late):
         max_minutes_late = max(minutes_late)
         LOG.info('Train {} max delay is {} minutes'.format(
-            rtti_train_id, max_minutes_late))
+            journey.rtti_train_id, max_minutes_late))
 
         if max_minutes_late != journey.maximum_minutes_late:
             journey.maximum_minutes_late = max_minutes_late
             journey.save()
 
 
-def record_actual_arrival(rtti_train_id, tiploc, time, timetabled_time):
+def record_actual_arrival(journey, tiploc, time, timetabled_time):
 
     kwargs = {
-        'journey__rtti_train_id': rtti_train_id,
+        'journey': journey,
         'location__tiploc': tiploc,
     }
 
