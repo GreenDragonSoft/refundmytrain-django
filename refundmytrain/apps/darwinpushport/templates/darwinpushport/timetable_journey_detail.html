@@ -18,7 +18,7 @@
     {% for loc in journey.calling_points.all %}
     <tr>
       <td>
-        {% if not loc.actual_arrival_time %}
+        {% if not loc.actual_arrival %}
 
           <span class="timetable-time">{{ loc.timetable_arrival_time|time|default:'-' }}</span>
 
@@ -29,7 +29,7 @@
           </span>
 
           <span>
-            {{ loc.actual_arrival_datetime|time|default:'-' }}
+            {{ loc.actual_arrival_time|time|default:'-' }}
           </span><br />
 
           <span class="late-text">{{ loc.late_text }}</span>

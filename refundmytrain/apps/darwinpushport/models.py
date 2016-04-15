@@ -90,6 +90,14 @@ class TimetableJourney(models.Model):
         blank=True
     )
 
+    maximum_minutes_late = models.PositiveSmallIntegerField(
+        help_text=(
+            'For trains with late arrivals at any calling point, this is the '
+            'maximum recorded delay in minutes for any calling point'
+        ),
+        default=0
+    )
+
     objects = TimetableJourneyManager()
 
     def __str__(self):
@@ -169,26 +177,27 @@ class CallingPoint(models.Model):
 
     objects = CallingPointManager()
 
-    def get_actual_arrival(self):
-        return self.actual_arrival_time  # related field
-
-    def actual_arrival_datetime(self):
-        actual_arrival = self.actual_arrival_time
-        return actual_arrival.datetime if actual_arrival else None
+    def actual_arrival_time(self):
+        """
+        Return ActualArrival.time if this calling point has an associated
+        actual arrival, else return None
+        """
+        if self.actual_arrival:
+            return self.actual_arrival.time
+        else:
+            return None
 
     def late_text(self):
-        actual = self.actual_arrival_datetime()
-        timetabled = self.timetable_arrival_datetime
-
-        if actual is None or timetabled is None or actual <= timetabled:
+        if (self.timetable_arrival_time is None or
+                self.actual_arrival is None):
             return None
 
-        mins_late = int((actual - timetabled).total_seconds() / 60)
+        minutes_late = self.actual_arrival.minutes_late()
 
-        if mins_late <= 0:
+        if minutes_late:
+            return '{} mins late'.format(minutes_late)
+        else:
             return None
-
-        return '{} mins late'.format(mins_late)
 
     def __str__(self):
         return self.location.name
@@ -222,11 +231,21 @@ class JourneyFromTo(models.Model):
 class ActualArrival(models.Model):
     timetabled_calling_point = models.OneToOneField(
         CallingPoint,
-        related_name='actual_arrival_time',
+        related_name='actual_arrival',
     )
 
     time = models.TimeField()  # TODO: explain why this field is retaiend
     datetime = models.DateTimeField()
+
+    def minutes_late(self):
+        actual_dt = self.timetabled_calling_point.journey.time_to_datetime(
+            self.time)
+        timetable_dt = self.timetabled_calling_point.journey.time_to_datetime(
+            self.timetabled_calling_point.timetable_arrival_time)
+
+        return max(
+            int((actual_dt - timetable_dt).total_seconds() / 60),
+            0)
 
 
 class ImportLog(models.Model):

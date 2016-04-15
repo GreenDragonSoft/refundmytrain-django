@@ -30,7 +30,7 @@ import logging
 from django.db import transaction
 
 from refundmytrain.apps.darwinpushport.models import (
-    ActualArrival, OperatingCompany, Location, CallingPoint
+    ActualArrival, OperatingCompany, Location, CallingPoint, TimetableJourney
 )
 
 from lxml import etree
@@ -134,9 +134,18 @@ def handle_train_status(ts_element):
 
 
 def handle_train_status_location(location_element, rtti_train_id):
+    try:
+        journey = TimetableJourney.objects.get(rtti_train_id=rtti_train_id)
+    except TimetableJourney.DoesNotExist:
+        LOG.info('No such train {} (maybe non-passenger?)'.format(
+            rtti_train_id))
+        return
+
     tiploc = location_element.attrib['tpl']
     timetable_arrival_time = location_element.attrib.get('pta', None)
     # timetable_departure_time = location_element.attrib.get('ptd', None)
+
+    minutes_late = set()
 
     for time_status in location_element:
         if 'at' not in time_status.attrib:
@@ -146,10 +155,10 @@ def handle_train_status_location(location_element, rtti_train_id):
             LOG.debug('{} actually arrived at {} {}'.format(
                 rtti_train_id, tiploc, time_status.attrib['at']))
 
-            record_actual_arrival(
+            minutes_late.add(record_actual_arrival(
                 rtti_train_id, tiploc, time_status.attrib['at'],
                 timetable_arrival_time
-            )
+            ))
 
         elif time_status.tag == DEPARTED_TAG:
             LOG.debug('{} actually departed at {} {}'.format(
@@ -164,6 +173,15 @@ def handle_train_status_location(location_element, rtti_train_id):
                 time_status.attrib['at'],
                 rtti_train_id,
                 tiploc))
+
+    if len(minutes_late):
+        max_minutes_late = max(minutes_late)
+        LOG.info('Train {} max delay is {} minutes'.format(
+            rtti_train_id, max_minutes_late))
+
+        if max_minutes_late != journey.maximum_minutes_late:
+            journey.maximum_minutes_late = max_minutes_late
+            journey.save()
 
 
 def record_actual_arrival(rtti_train_id, tiploc, time, timetabled_time):
@@ -182,7 +200,8 @@ def record_actual_arrival(rtti_train_id, tiploc, time, timetabled_time):
     except CallingPoint.DoesNotExist:
         # This could be because the train was a non-passenger journey.
         # TODO: look up how to make this quieter.
-        LOG.info('Failed to find CallingPoint({})'.format(kwargs))
+        LOG.warn('Failed to find CallingPoint({})'.format(kwargs))
+        return 0
 
     else:
 
@@ -190,7 +209,8 @@ def record_actual_arrival(rtti_train_id, tiploc, time, timetabled_time):
             ActualArrival.objects.filter(
                 timetabled_calling_point=calling_point).delete()
 
-            ActualArrival.objects.create(
+            a = ActualArrival.objects.create(
                 timetabled_calling_point=calling_point,
                 time=time
             )
+            return a.minutes_late()

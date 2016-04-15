@@ -37,10 +37,57 @@ class CallingPointInline(admin.TabularInline):
         'timetable_departure_datetime',
 
         # unbound callable, see http://stackoverflow.com/a/5684745
-        CallingPoint.get_actual_arrival,
+        CallingPoint.actual_arrival_time,
     )
 
     readonly_fields = fields
+
+
+class MinutesLateFilter(admin.SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options.
+    title = 'minutes late'
+
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'timetable_variation'
+
+    def lookups(self, request, model_admin):
+        """
+        Returns a list of tuples. The first element in each
+        tuple is the coded value for the option that will
+        appear in the URL query. The second element is the
+        human-readable name for the option that will appear
+        in the right sidebar.
+        """
+        return (
+            ('15+', '> 15 min'),
+            ('30+', '> 30 min'),
+            ('60+', '> 1hr'),
+            ('120+', '> 2hr'),
+        )
+
+    def queryset(self, request, queryset):
+        """
+        Returns the filtered queryset based on the value
+        provided in the query string and retrievable via
+        `self.value()`.
+        """
+
+        if self.value() == '15+':
+            return queryset.filter(
+                maximum_minutes_late__gte=15)
+
+        elif self.value() == '30+':
+            return queryset.filter(
+                maximum_minutes_late__gte=30)
+
+        elif self.value() == '60+':
+            return queryset.filter(
+                maximum_minutes_late__gte=60)
+
+        elif self.value() == '120+':
+            return queryset.filter(
+                maximum_minutes_late__gte=120)
 
 
 @admin.register(TimetableJourney)
@@ -51,6 +98,7 @@ class TimetableJourneyAdmin(admin.ModelAdmin):
         'start',
         'end',
         'operating_company',
+        'maximum_minutes_late',
         'num_calling_points',
         'train_uid',
         'train_id',
@@ -65,6 +113,7 @@ class TimetableJourneyAdmin(admin.ModelAdmin):
 
     list_filter = (
         'start_date',
+        MinutesLateFilter,
     )
 
     def get_readonly_fields(self, request, obj=None):
