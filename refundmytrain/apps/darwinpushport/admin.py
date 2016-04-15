@@ -29,8 +29,18 @@ class CallingPointInline(admin.TabularInline):
     extra = 0
     can_delete = False
 
-    def get_readonly_fields(self, request, obj=None):
-        return [f.name for f in self.model._meta.fields]
+    fields = (
+        'location',
+        'timetable_arrival_time',
+        'timetable_arrival_datetime',
+        'timetable_departure_time',
+        'timetable_departure_datetime',
+
+        # unbound callable, see http://stackoverflow.com/a/5684745
+        CallingPoint.get_actual_arrival,
+    )
+
+    readonly_fields = fields
 
 
 @admin.register(TimetableJourney)

@@ -169,6 +169,9 @@ class CallingPoint(models.Model):
 
     objects = CallingPointManager()
 
+    def get_actual_arrival(self):
+        return self.actual_arrival_time  # related field
+
     def actual_arrival_datetime(self):
         actual_arrival = self.actual_arrival_time
         return actual_arrival.datetime if actual_arrival else None
