@@ -123,11 +123,14 @@ class TimetableJourney(models.Model):
         For example if a train has a start date of 2nd April, a time of 01:00
         is going to be the next day (3rd April)
         """
+        if time is None:
+            return None
+
         if isinstance(time, six.string_types):
             hour, minute = time.split(':')
             time = datetime.time(int(hour), int(minute))
 
-        assert isinstance(time, datetime.time)
+        assert isinstance(time, datetime.time), type(time)
 
         if time.hour in [0, 1, 2, 3]:
             # if it's between midnight and 4am it's got to be the day *after*
