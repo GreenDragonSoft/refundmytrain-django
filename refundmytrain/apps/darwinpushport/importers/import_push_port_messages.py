@@ -35,6 +35,10 @@ DEPARTED_TAG = (
     '{http://www.thalesgroup.com/rtti/PushPort/Forecasts/v2}dep'
 )
 
+PASS_TAG = (
+    '{http://www.thalesgroup.com/rtti/PushPort/Forecasts/v2}pass'
+)
+
 
 def import_push_port_messages(f):
     for xml_fragment in f.readlines():
@@ -99,6 +103,9 @@ def handle_train_status_location(location_element, rtti_train_id):
         elif time_status.tag == DEPARTED_TAG:
             LOG.debug('{} actually departed at {} {}'.format(
                 rtti_train_id, tiploc, time_status.attrib['at']))
+
+        elif time_status.tag == PASS_TAG:
+            pass
 
         else:
             LOG.warn('unhandled <{} at="{}"> for {} at {}'.format(
