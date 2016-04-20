@@ -59,6 +59,7 @@ class TimetableJourney(models.Model):
     """
     Roughly matches the `Journey` field defined in the Darwin schedule file.
     """
+    created_at = models.DateTimeField(auto_now_add=True)
 
     rtti_train_id = models.CharField(
         primary_key=True,
@@ -161,6 +162,8 @@ class CallingPoint(models.Model):
         ('OPDT', 'Operational Destination'),
     ))
 
+    created_at = models.DateTimeField(auto_now_add=True)
+
     journey = models.ForeignKey(
         TimetableJourney,
         related_name='calling_points',
@@ -238,6 +241,8 @@ class JourneyFromTo(models.Model):
 
 
 class ActualArrival(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+
     timetabled_calling_point = models.OneToOneField(
         CallingPoint,
         related_name='actual_arrival',
