@@ -1,4 +1,5 @@
 import logging
+import itertools
 import datetime
 
 from collections import OrderedDict
@@ -160,6 +161,16 @@ class TimetableJourney(models.Model):
         LOG.debug('{} + {} = {}'.format(self.start_date, time, combined))
         return combined
 
+    def add_from_to_entries(self):
+        for from_cp, to_cp in itertools.combinations(
+                self.public_calling_points, 2):
+
+            from_to, _ = JourneyFromTo.objects.get_or_create(
+                from_location=from_cp.location,
+                to_location=to_cp.location)
+
+            from_to.journeys.add(self)
+
 
 class CallingPointManager(models.Manager):
     def get_queryset(self):
@@ -319,14 +330,7 @@ class LateRunningReason(ReasonModel):
 
 @receiver(pre_save)
 def update_datetimes_from_times(sender, instance, **kwargs):
-    if sender == CallingPoint:
-        instance.timetable_arrival_datetime = (
-            instance.journey.time_to_datetime(instance.timetable_arrival_time))
-        instance.timetable_departure_datetime = (
-            instance.journey.time_to_datetime(
-                instance.timetable_departure_time))
-
-    elif sender == ActualArrival:
+    if sender == ActualArrival:
         instance.datetime = (
             instance.timetabled_calling_point.journey.time_to_datetime(
                 instance.time)

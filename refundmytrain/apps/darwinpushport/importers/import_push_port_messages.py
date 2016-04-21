@@ -26,6 +26,7 @@
 # </Pport>
 
 import logging
+import re
 
 from django.db import transaction
 
@@ -67,6 +68,23 @@ PASS_TAG = (
     '{http://www.thalesgroup.com/rtti/PushPort/Forecasts/v2}pass'
 )
 
+CALLING_POINT_PREFIX = (
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}'
+)
+
+CALLING_POINT_TAGS = set([
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}IP',
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}PP',
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}OR',
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}DT',
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}OPOR',
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}OPIP',
+])
+
+SCHEDULE_CANCEL_REASON_TAG = (
+    '{http://www.thalesgroup.com/rtti/PushPort/Schedules/v1}cancelReason'
+)
+
 IGNORED_IDS = None
 
 
@@ -75,23 +93,20 @@ class CantFindMatchingCallingPoint(Exception):
 
 
 def import_push_port_messages(f):
+    assert Location.objects.all().count()
+    assert OperatingCompany.objects.all().count()
+
     global IGNORED_IDS
     IGNORED_IDS = set(
         j.rtti_train_id for j in NonPassengerJourney.objects.all())
     LOG.info('Ignoring {} rtti train ids'.format(len(IGNORED_IDS)))
 
     for xml_fragment in f.readlines():
-        load_journies_from_xml_file(xml_fragment)
+        handle_xml_fragment(xml_fragment)
 
 
-def load_journies_from_xml_file(xml_string):
-    assert Location.objects.all().count()
-    assert OperatingCompany.objects.all().count()
-
-    root = etree.fromstring(xml_string)
-    ur_element = root[0]
-
-    assert UR_TAG == ur_element.tag, ur_element.tag
+def handle_xml_fragment(xml_fragment):
+    ur_element = parse_ur_element(xml_fragment)
 
     for element in ur_element:
         message_type = element.tag
@@ -99,8 +114,16 @@ def load_journies_from_xml_file(xml_string):
         if message_type == TRAIN_STATUS_TAG:  # train status
             handle_train_status(element)
 
-        # else:
-        #     stdout.write('Not implemented: {}'.format(message_type))
+        elif message_type == SCHEDULE_TAG:
+            handle_schedule(element)
+
+
+def parse_ur_element(xml_string):
+    root = etree.fromstring(xml_string)
+    ur_element = root[0]
+
+    assert UR_TAG == ur_element.tag, ur_element.tag
+    return ur_element
 
 
 def handle_train_status(ts_element):
@@ -206,7 +229,7 @@ def handle_train_status_location(location_element, journey):
     if len(minutes_late):
         max_minutes_late = max(minutes_late)
         if max_minutes_late >= 30:
-            LOG.info('Train {} max delay is {} minutes'.format(
+            LOG.info('{} max delay set to {} minutes'.format(
                 journey.rtti_train_id, max_minutes_late))
 
         if max_minutes_late != journey.maximum_minutes_late:
@@ -231,6 +254,7 @@ def record_actual_arrival(journey, tiploc, time, timetabled_time):
         calling_point = CallingPoint.objects.get(**kwargs)
 
     except CallingPoint.DoesNotExist:
+        # TODO: look up how to make this quieter.
         LOG.warn('Failed to find CallingPoint({})'.format(kwargs))
         raise CantFindMatchingCallingPoint
 
@@ -248,3 +272,126 @@ def record_actual_arrival(journey, tiploc, time, timetabled_time):
             defaults={'time': time}
         )
         return a.minutes_late()
+
+
+def handle_schedule(element):
+    """
+    <schedule rid="201604010576340" ssd="2016-04-01" toc="CH"
+              trainId="2R03" uid="C91354">
+      <ns2:OR act="TB" ptd="05:50" tpl="MARYLBN" wtd="05:50"/>
+      <ns2:PP tpl="NEASDSJ" wtp="05:57"/>
+      <ns2:IP act="T " pta="05:59" ptd="05:59" tpl="WEMBLSM"
+              wta="05:58:30" wtd="05:59"/>
+      <ns2:IP act="T " pta="06:04" ptd="06:04" tpl="NTHOLTP"
+              wta="06:03:30" wtd="06:04"/>
+      <ns2:PP tpl="NTHOPKJ" wtp="06:06"/>
+      <ns2:IP act="T " pta="06:08" ptd="06:11" tpl="SRUISLP"
+              wta="06:08" wtd="06:11"/>
+      <ns2:DT act="TF" pta="06:17" tpl="WRUISLP" wta="06:15"/>
+    </schedule>
+    """
+    journey = load_journey(element)
+    if not journey:
+        return
+
+    three_alphas_before = set(filter(
+        None,
+        [cp.location.three_alpha for cp in journey.public_calling_points]
+    ))
+
+    journey.all_calling_points.all().delete()
+
+    journey.all_calling_points.set(
+        parse_calling_points(element, journey))
+
+    three_alphas_after = set(filter(
+        None,
+        [cp.location.three_alpha for cp in journey.public_calling_points]
+    ))
+
+    journey.save()
+
+    added = three_alphas_after - three_alphas_before
+    removed = three_alphas_before - three_alphas_after
+
+    if added or removed:
+        LOG.info('{} updated schedule. added: "{}" removed "{}" '
+                 '(public only)'.format(
+                    journey.rtti_train_id,
+                    ', '.join(added),
+                    ', '.join(removed)))
+
+    journey.add_from_to_entries()  # TODO: test that this actually works
+
+
+def load_journey(element):
+
+    if element.attrib.get('isPassengerSvc', None) == 'false':
+        global IGNORED_IDS
+        IGNORED_IDS.add(element.attrib['rid'])
+        return None
+
+    # TODO: filter out non-passenger services. See
+    # http://nrodwiki.rockshore.net/index.php/Darwin:Schedule_Element
+    # Look for isPassengerSvc="false"
+    journey, was_created = TimetableJourney.objects.update_or_create(
+        rtti_train_id=element.attrib['rid'],
+        defaults={
+            'start_date': element.attrib['ssd'],
+            'operating_company': OperatingCompany.objects.get(
+                atoc_code=element.attrib['toc']),
+            'train_id': element.attrib['trainId'],
+            'train_uid': element.attrib['uid'],
+        }
+    )
+    return journey
+
+
+def parse_calling_points(element, journey):
+    """
+
+    <uR requestID="0000000000000511" requestSource="at08" updateOrigin="CIS">
+      <schedule rid="201604241274537" ssd="2016-04-24" toc="VT" trainCat="XX"
+                trainId="1A09" uid="Y82072">
+        <ns2:OR act="TB" ptd="09:38" tpl="LVRPLSH" wtd="09:38"/>
+        <ns2:PP tpl="EDGH" wtp="09:42"/>
+        <ns2:PP tpl="EDGHSB" wtp="09:42:30"/>
+        <ns2:PP tpl="WVRTREJ" wtp="09:44"/>
+        <ns2:PP tpl="ALERTN" wtp="09:46:30"/>
+        <ns2:PP tpl="DITTON" wtp="09:50"/>
+        <ns2:IP act="T " pta="09:53" ptd="09:54" tpl="RUNCORN" wta="09:52:30"
+                wtd="09:54"/>
+        <ns2:PP tpl="WEAVERJ" wtp="09:59"/>
+        <ns2:PP tpl="ACBG" wtp="10:00"/>
+      </schedule>
+    </uR>
+    """
+    # TODO: factor out the repeated code between this function and the
+    # ordinary schedule importer.
+
+    for sub in element:
+        if sub.tag == SCHEDULE_CANCEL_REASON_TAG:
+            LOG.info('TODO: handle schedule cancel reason tag')
+            continue
+
+        assert sub.tag in CALLING_POINT_TAGS, '{} not in {}'.format(
+            sub.tag, CALLING_POINT_TAGS)
+
+        timetable_arrival_time = sub.attrib.get('pta', None)
+        timetable_departure_time = sub.attrib.get('ptd', None)
+
+        public_visible = (
+            timetable_arrival_time is not None and
+            timetable_departure_time is not None
+        )
+        tiploc = sub.attrib['tpl']
+        calling_point_type = re.sub(CALLING_POINT_PREFIX, '', sub.tag)
+
+        yield CallingPoint.objects.create(
+            journey=journey,
+            public_visible=public_visible,
+            timetable_arrival_time=timetable_arrival_time,
+            timetable_departure_time=timetable_departure_time,
+            location=Location.objects.get(tiploc=tiploc),
+            calling_point_type=calling_point_type
+        )
