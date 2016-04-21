@@ -22,5 +22,7 @@ urlpatterns = [
 
     url(r'^train-movements/', include('refundmytrain.apps.trainmovements.urls')),
 
+    url(r'^_status/', include('refundmytrain.apps.status.urls')),
+
     url(r'^', include('refundmytrain.apps.darwinpushport.urls')),
 ]

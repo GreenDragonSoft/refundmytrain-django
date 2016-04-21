@@ -43,3 +43,15 @@ ul.recent-late-trains li a:hover {
 ul.recent-late-trains span.operating-company, span.date, service-description {
   font-size: 70%;
 }
+
+.status-page h1.ok {
+  color: green;
+}
+
+.status-page h1.warning {
+  color: orange;
+}
+
+.status-page h1.error {
+  color: red;
+}

@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'refundmytrain.apps.operators',
     'refundmytrain.apps.trainmovements',
     'refundmytrain.apps.darwinpushport',
+    'refundmytrain.apps.status',
 ]
 
 MIDDLEWARE_CLASSES = (

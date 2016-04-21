@@ -1,0 +1,14 @@
+{% extends 'refundmytrain/base.html' %}
+
+{% block content %}
+
+<div class="container status-page">
+
+  <h1 class="{{ result.cls }}">{{ result.summary }}</h1>
+  <p>
+  {{ result.text }}
+  </p>
+
+</div>
+
+{% endblock %}
