@@ -136,6 +136,7 @@ class JourneyFromToAdmin(admin.ModelAdmin):
 class ImportLogAdmin(admin.ModelAdmin):
     list_display = ('filename', 'import_datetime')
     search_fields = ('filename',)
+    list_filter = ('import_datetime',)
 
 
 @admin.register(CancellationReason)
