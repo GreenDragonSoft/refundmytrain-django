@@ -70,6 +70,10 @@ PASS_TAG = (
 IGNORED_IDS = None
 
 
+class CantFindMatchingCallingPoint(Exception):
+    pass
+
+
 def import_push_port_messages(f):
     global IGNORED_IDS
     IGNORED_IDS = set(
@@ -171,10 +175,13 @@ def handle_train_status_location(location_element, journey):
             LOG.debug('{} actually arrived at {} {}'.format(
                 journey.rtti_train_id, tiploc, time_status.attrib['at']))
 
-            minutes_late.add(record_actual_arrival(
-                journey, tiploc, time_status.attrib['at'],
-                timetable_arrival_time
-            ))
+            try:
+                minutes_late.add(record_actual_arrival(
+                    journey, tiploc, time_status.attrib['at'],
+                    timetable_arrival_time
+                ))
+            except CantFindMatchingCallingPoint:
+                pass
 
         elif time_status.tag == DEPARTED_TAG:
             LOG.debug('{} actually departed at {} {}'.format(
@@ -219,11 +226,16 @@ def record_actual_arrival(journey, tiploc, time, timetabled_time):
 
     except CallingPoint.DoesNotExist:
         LOG.warn('Failed to find CallingPoint({})'.format(kwargs))
-        return 0
+        raise CantFindMatchingCallingPoint
+
+    except CallingPoint.MultipleObjectsReturned:
+        LOG.warn('Multiple objects for CallingPoint({}). Currently cannot '
+                 'disambiguate.'.format(kwargs))
+        raise CantFindMatchingCallingPoint
 
     else:
         if calling_point.timetable_arrival_time is None:
-            return 0
+            raise CantFindMatchingCallingPoint
 
         with transaction.atomic():
             ActualArrival.objects.filter(
