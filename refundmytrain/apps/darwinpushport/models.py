@@ -125,7 +125,7 @@ class TimetableJourney(models.Model):
         return '{}'.format(self.rtti_train_id)
 
     def num_calling_points(self):
-        return self.calling_points.all().count()
+        return len(self.public_calling_points)
 
     def start(self):
         public_calling_points = self.public_calling_points
