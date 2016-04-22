@@ -8,7 +8,8 @@ import batcher
 from django.db import transaction
 
 from refundmytrain.apps.darwinpushport.models import (
-    OperatingCompany, Location, TimetableJourney, CallingPoint, JourneyFromTo
+    OperatingCompany, Location, TimetableJourney, CallingPoint, JourneyFromTo,
+    NonPassengerJourney
 )
 
 from lxml import etree
@@ -30,6 +31,10 @@ def import_schedule(f):
     assert OperatingCompany.objects.all().count()
 
     journey_cache = {}
+
+    def _save_non_passenger_service_ids():
+        bulk_add_non_passenger_service_ids(
+            set(get_non_passenger_service_ids(f)))
 
     def _create_new_journeys(journey_cache):
         existing_journey_ids = get_existing_journey_ids()
@@ -54,12 +59,14 @@ def import_schedule(f):
 
     def _delete_existing_calling_points(journeys):
         count = 0
+        total = len(journeys)
+
         for journey in journeys:
-            journey.calling_points.all().delete()
+            journey.all_calling_points.all().delete()
             count += 1
             if count % LOG_EVERY == 0:
-                LOG.info('Deleted calling points for {} journeys'.format(
-                    count))
+                LOG.info('Deleted calling points for {} / {} journeys'.format(
+                    count, total))
 
     def _insert_calling_points(journey_cache):
         from_to_entries = defaultdict(list)
@@ -75,9 +82,8 @@ def import_schedule(f):
 
         update_search_entries(from_to_entries)
 
-    LOG.info('Loading...')
-
     with transaction.atomic():
+        _save_non_passenger_service_ids()
         _create_new_journeys(journey_cache)
         _load_remaining_journeys(journey_cache)
         _delete_existing_calling_points(journey_cache.values())
@@ -87,7 +93,38 @@ def import_schedule(f):
     _update_journey_from_tos(new_from_to_entries)
 
 
+def is_passenger_service(element):
+    """
+    Commercial (non-passenger) services have isPassengerSvc="false".
+    Passenger services don't have this attribute at all (yuk)
+    """
+    try:
+        value = element.attrib['isPassengerSvc']
+    except KeyError:
+        return True  # attribute missing means it IS a passenger service
+    else:
+        assert value == 'false', value
+        return False
+
+
 def get_journey_elements(f):
+    """
+    Yield lxml <Journey> element for all passenger services.
+    """
+    return filter(is_passenger_service, get_all_journey_elements(f))
+
+
+def get_non_passenger_service_ids(f):
+    """
+    Yield rtti_train_ids for every non-passenger service, eg commercial ones
+    """
+
+    for element in get_all_journey_elements(f):
+        if not is_passenger_service(element):
+            yield element.attrib['rid']
+
+
+def get_all_journey_elements(f):
     f.seek(0)
 
     for xml_chunk in split_into_journey_chunks(f):
@@ -96,17 +133,33 @@ def get_journey_elements(f):
         assert 'Journey' == get_element_tag(element), (
             'Unexpected Journey tag: `{}`'.format(element.tag))
 
-        if element.attrib.get('isPassengerSvc', None) == 'false':
-            continue  # Don't load commercial services
-
-        # if element.attrib.get('toc') != 'LM':
-        #     continue  # NOTE: We're only doing London Midland to start
-
         yield element
 
 
 def get_existing_journey_ids():
     return set(j.rtti_train_id for j in TimetableJourney.objects.all())
+
+
+def bulk_add_non_passenger_service_ids(rtti_train_ids_set):
+    # ~ 11K passenger ids per schedule
+
+    existing_ids = set(
+        j.rtti_train_id for j in NonPassengerJourney.objects.all()
+    )
+
+    ids_to_add = rtti_train_ids_set - existing_ids
+
+    count = 0
+    total = len(ids_to_add)
+
+    with batcher.batcher(NonPassengerJourney.objects.bulk_create) as b:
+        for rtti_train_id in ids_to_add:
+            b.push(NonPassengerJourney(rtti_train_id=rtti_train_id))
+            count += 1
+
+            if count % LOG_EVERY == 0:
+                LOG.info('Created {} / {} NonPassengerJourneys'.format(
+                    count, total))
 
 
 def bulk_create_new_journeys(journey_elements, ignore_rtti_ids):
@@ -178,14 +231,16 @@ def bulk_insert_calling_points(journey_elements, journey_cache):
                     calling_point = make_calling_point(
                         element, journey, location_cache)
 
-                    if calling_point:
-                        calling_points.append(calling_point)
+                    calling_points.append(calling_point)
 
             for calling_point in calling_points:
                 b.push(calling_point)
 
+            public_calling_points = filter(
+                lambda cp: cp.public_visible, calling_points)
+
             for from_cp, to_cp in itertools.combinations(
-                    calling_points, 2):
+                    public_calling_points, 2):
                 yield ((from_cp.location, to_cp.location), journey)
 
             journey_count += 1
@@ -209,10 +264,13 @@ def make_calling_point(element, journey, location_cache):
     location = location_cache[element.attrib['tpl']]
 
     if timetable_departure is None and timetable_arrival is None:
-        return None  # not helpful, discard
+        public_visible = False
+    else:
+        public_visible = True
 
     return CallingPoint(**{
         'journey': journey,
+        'public_visible': public_visible,
         'location': location,
         'calling_point_type': get_element_tag(element),
         'timetable_arrival_time': timetable_arrival,
@@ -237,6 +295,8 @@ def get_element_tag(element):
 
 def update_search_entries(journey_from_tos):
     count = 0
+    total = len(journey_from_tos)
+
     for (from_location, to_location), journeys in journey_from_tos.items():
         obj, _ = JourneyFromTo.objects.get_or_create(
             from_location=from_location,
@@ -250,4 +310,5 @@ def update_search_entries(journey_from_tos):
 
         count += 1
         if count % LOG_EVERY == 0:
-            LOG.info('Updated {} JourneyFromTo entries'.format(count))
+            LOG.info('Updated {} / {} JourneyFromTo entries'.format(
+                count, total))

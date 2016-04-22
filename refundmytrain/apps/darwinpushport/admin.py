@@ -30,6 +30,7 @@ class CallingPointInline(admin.TabularInline):
     can_delete = False
 
     fields = (
+        'calling_point_type',
         'location',
         'timetable_arrival_time',
         'timetable_arrival_datetime',
@@ -135,6 +136,7 @@ class JourneyFromToAdmin(admin.ModelAdmin):
 class ImportLogAdmin(admin.ModelAdmin):
     list_display = ('filename', 'import_datetime')
     search_fields = ('filename',)
+    list_filter = ('import_datetime',)
 
 
 @admin.register(CancellationReason)

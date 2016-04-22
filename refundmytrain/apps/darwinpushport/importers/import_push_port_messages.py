@@ -30,7 +30,8 @@ import logging
 from django.db import transaction
 
 from refundmytrain.apps.darwinpushport.models import (
-    ActualArrival, OperatingCompany, Location, CallingPoint, TimetableJourney
+    ActualArrival, OperatingCompany, Location, CallingPoint, TimetableJourney,
+    NonPassengerJourney
 )
 
 from lxml import etree
@@ -66,8 +67,15 @@ PASS_TAG = (
     '{http://www.thalesgroup.com/rtti/PushPort/Forecasts/v2}pass'
 )
 
+IGNORED_IDS = None
+
 
 def import_push_port_messages(f):
+    global IGNORED_IDS
+    IGNORED_IDS = set(
+        j.rtti_train_id for j in NonPassengerJourney.objects.all())
+    LOG.info('Ignoring {} rtti train ids'.format(len(IGNORED_IDS)))
+
     for xml_fragment in f.readlines():
         load_journies_from_xml_file(xml_fragment)
 
@@ -117,10 +125,13 @@ def handle_train_status(ts_element):
     """
 
     rtti_train_id = ts_element.attrib['rid']
+    if rtti_train_id in IGNORED_IDS:
+        return
+
     try:
         journey = TimetableJourney.objects.get(rtti_train_id=rtti_train_id)
     except TimetableJourney.DoesNotExist:
-        LOG.info('No such train {} (maybe non-passenger?)'.format(
+        LOG.warn("No such train {}, this shouldn't happen".format(
             rtti_train_id))
         return
 
@@ -181,8 +192,9 @@ def handle_train_status_location(location_element, journey):
 
     if len(minutes_late):
         max_minutes_late = max(minutes_late)
-        LOG.info('Train {} max delay is {} minutes'.format(
-            journey.rtti_train_id, max_minutes_late))
+        if max_minutes_late >= 30:
+            LOG.info('Train {} max delay is {} minutes'.format(
+                journey.rtti_train_id, max_minutes_late))
 
         if max_minutes_late != journey.maximum_minutes_late:
             journey.maximum_minutes_late = max_minutes_late
@@ -190,6 +202,9 @@ def handle_train_status_location(location_element, journey):
 
 
 def record_actual_arrival(journey, tiploc, time, timetabled_time):
+    """
+    Return how late this arrival was, in minutes
+    """
 
     kwargs = {
         'journey': journey,
@@ -203,12 +218,12 @@ def record_actual_arrival(journey, tiploc, time, timetabled_time):
         calling_point = CallingPoint.objects.get(**kwargs)
 
     except CallingPoint.DoesNotExist:
-        # This could be because the train was a non-passenger journey.
-        # TODO: look up how to make this quieter.
         LOG.warn('Failed to find CallingPoint({})'.format(kwargs))
         return 0
 
     else:
+        if calling_point.timetable_arrival_time is None:
+            return 0
 
         with transaction.atomic():
             ActualArrival.objects.filter(
