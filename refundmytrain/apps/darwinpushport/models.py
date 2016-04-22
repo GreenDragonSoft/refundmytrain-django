@@ -272,6 +272,10 @@ class ActualArrival(models.Model):
     time = models.TimeField()  # TODO: explain why this field is retaiend
     datetime = models.DateTimeField()
 
+    def to_datetime(self):
+        return self.timetabled_calling_point.journey.time_to_datetime(
+            self.time)
+
     def minutes_late(self):
         actual_dt = self.timetabled_calling_point.journey.time_to_datetime(
             self.time)
