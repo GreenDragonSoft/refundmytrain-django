@@ -1,8 +1,8 @@
 import contextlib
 import gzip
+import logging
 import os
 import re
-import sys
 
 from ftplib import FTP
 
@@ -24,12 +24,7 @@ REFERENCE_PATTERN = '\d+_ref_v3.xml.gz'
 SCHEDULE_PATTERN = '\d+_v8.xml.gz'
 
 DATA_DIR = os.path.join(settings.PROJECT_ROOT, '..', '..', 'darwin_data')
-
-
-def print_func(text, *args, **kwargs):
-    sys.stdout.write(text + '\n', *args, **kwargs)
-
-PRINT = print_func
+LOG = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -37,18 +32,18 @@ class Command(BaseCommand):
             'push port data. Records latest version received in the db.')
 
     def handle(self, *args, **options):
-        global PRINT
-        PRINT = self.stdout.write
-
         host = os.environ['DARWIN_DATA_FEEDS_HOST']
         username = os.environ['DARWIN_DATA_FEEDS_USERNAME']
         password = os.environ['DARWIN_DATA_FEEDS_PASSWORD']
 
-        handle(host, username, password)
-        self.stdout.write(self.style.SUCCESS('OK'))
+        try:
+            handle(host, username, password)
+        except Exception as e:
+            LOG.error(e)
 
 
 def handle(host, username, password):
+    LOG.info('Connecting to FTP, getting listing')
     with FTP(host) as ftp:
         ftp.login(username, password)
 
@@ -86,7 +81,7 @@ def download_latest(ftp):
 def already_loaded(filename):
     if ImportLog.objects.filter(
             filename=normalize_filename(filename)).count() > 0:
-        PRINT('Already loaded: {}'.format(filename))
+        LOG.info('Already loaded: {}'.format(filename))
         return True
 
     return False
@@ -124,10 +119,10 @@ def categorise_filenames(filenames):
         else:
             unknown_files.append(filename)
 
-    PRINT('{} reference files'.format(len(reference_files)))
-    PRINT('{} schedule files'.format(len(schedule_files)))
-    PRINT('{} push port files'.format(len(push_port_files)))
-    PRINT('unknown files: {}'.format(unknown_files))
+    LOG.info('{} reference files'.format(len(reference_files)))
+    LOG.info('{} schedule files'.format(len(schedule_files)))
+    LOG.info('{} push port files'.format(len(push_port_files)))
+    LOG.info('unknown files: {}'.format(unknown_files))
     return reference_files, schedule_files, push_port_files, unknown_files
 
 
@@ -153,7 +148,7 @@ def download_file(ftp, filename):
 
     if not os.path.isfile(download_filename):
         with atomicfile.AtomicFile(download_filename, 'wb') as f:
-            PRINT('Downloading {}...'.format(filename))
+            LOG.info('Downloading {}...'.format(filename))
             ftp.retrbinary('RETR {}'.format(filename), f.write)
 
     with open(download_filename, 'rb') as f:
@@ -161,22 +156,22 @@ def download_file(ftp, filename):
 
 
 def load_push_port_file(filename, f):
-    PRINT('Loading push port data {}'.format(filename))
+    LOG.info('Loading push port data {}'.format(filename))
     import_push_port_messages(f)
 
 
 def load_reference_file(filename, f):
-    PRINT('Loading reference data {}'.format(filename))
+    LOG.info('Loading reference data {}'.format(filename))
     with gzip.GzipFile(fileobj=f, mode='rb') as f_unzipped:
         locations, operating_companies = import_reference_data(f_unzipped)
 
-        PRINT('Loaded {} locations, {} operating_companies'.format(
+        LOG.info('Loaded {} locations, {} operating_companies'.format(
             locations, operating_companies))
 
 
 def load_schedule_file(filename, f):
-    PRINT('Loading schedule file {}'.format(filename))
+    LOG.info('Loading schedule file {}'.format(filename))
     with gzip.GzipFile(fileobj=f, mode='rb') as f_unzipped:
         num_journeys = import_schedule(f_unzipped)
 
-        PRINT('Loaded {} journeys'.format(num_journeys))
+        LOG.info('Loaded {} journeys'.format(num_journeys))

@@ -59,12 +59,14 @@ def import_schedule(f):
 
     def _delete_existing_calling_points(journeys):
         count = 0
+        total = len(journeys)
+
         for journey in journeys:
-            journey.calling_points.all().delete()
+            journey.all_calling_points.all().delete()
             count += 1
             if count % LOG_EVERY == 0:
-                LOG.info('Deleted calling points for {} journeys'.format(
-                    count))
+                LOG.info('Deleted calling points for {} / {} journeys'.format(
+                    count, total))
 
     def _insert_calling_points(journey_cache):
         from_to_entries = defaultdict(list)
@@ -79,8 +81,6 @@ def import_schedule(f):
             len(from_to_entries)))
 
         update_search_entries(from_to_entries)
-
-    LOG.info('Loading...')
 
     with transaction.atomic():
         _save_non_passenger_service_ids()
@@ -295,6 +295,8 @@ def get_element_tag(element):
 
 def update_search_entries(journey_from_tos):
     count = 0
+    total = len(journey_from_tos)
+
     for (from_location, to_location), journeys in journey_from_tos.items():
         obj, _ = JourneyFromTo.objects.get_or_create(
             from_location=from_location,
@@ -308,4 +310,5 @@ def update_search_entries(journey_from_tos):
 
         count += 1
         if count % LOG_EVERY == 0:
-            LOG.info('Updated {} JourneyFromTo entries'.format(count))
+            LOG.info('Updated {} / {} JourneyFromTo entries'.format(
+                count, total))

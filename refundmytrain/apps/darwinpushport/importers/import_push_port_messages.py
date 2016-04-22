@@ -192,8 +192,9 @@ def handle_train_status_location(location_element, journey):
 
     if len(minutes_late):
         max_minutes_late = max(minutes_late)
-        LOG.info('Train {} max delay is {} minutes'.format(
-            journey.rtti_train_id, max_minutes_late))
+        if max_minutes_late >= 30:
+            LOG.info('Train {} max delay is {} minutes'.format(
+                journey.rtti_train_id, max_minutes_late))
 
         if max_minutes_late != journey.maximum_minutes_late:
             journey.maximum_minutes_late = max_minutes_late
@@ -201,6 +202,9 @@ def handle_train_status_location(location_element, journey):
 
 
 def record_actual_arrival(journey, tiploc, time, timetabled_time):
+    """
+    Return how late this arrival was, in minutes
+    """
 
     kwargs = {
         'journey': journey,
@@ -214,8 +218,6 @@ def record_actual_arrival(journey, tiploc, time, timetabled_time):
         calling_point = CallingPoint.objects.get(**kwargs)
 
     except CallingPoint.DoesNotExist:
-        # This could be because the train was a non-passenger journey.
-        # TODO: look up how to make this quieter.
         LOG.warn('Failed to find CallingPoint({})'.format(kwargs))
         return 0
 
