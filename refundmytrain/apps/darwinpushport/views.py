@@ -43,7 +43,7 @@ class TimetableJourneyListFromTo(TemplateView):
         )
 
         journeys = journey_from_to.journeys.prefetch_related(
-            'calling_points').order_by('start_date')
+            'all_calling_points').order_by('start_date')
 
         context['journeys_by_date'] = self._get_grouped_journeys(
             journeys, from_three_alpha, to_three_alpha)
@@ -58,7 +58,7 @@ class TimetableJourneyListFromTo(TemplateView):
             journeys_for_date = []
 
             for journey in filter(lambda j: j.start_date == date, journeys):
-                calling_points = list(journey.calling_points.all())
+                calling_points = list(journey.public_calling_points)
 
                 def find_calling_point(three_alpha):
                     return next(filter(

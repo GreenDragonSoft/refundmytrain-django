@@ -15,7 +15,7 @@
         <th>Departure</th>
       </tr>
     <tbody>
-    {% for loc in journey.calling_points.all %}
+    {% for loc in journey.public_calling_points %}
     <tr>
       <td>
         {% if not loc.actual_arrival %}

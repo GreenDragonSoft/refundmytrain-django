@@ -49,6 +49,15 @@ class Location(models.Model):
         )
 
 
+class NonPassengerJourney(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    rtti_train_id = models.CharField(
+        primary_key=True,
+        max_length=15,
+    )
+
+
 class TimetableJourneyManager(models.Manager):
     def get_queryset(self):
         return super(TimetableJourneyManager, self) \
@@ -107,6 +116,11 @@ class TimetableJourney(models.Model):
 
     objects = TimetableJourneyManager()
 
+    @property
+    def public_calling_points(self):
+        return [cp for cp in self.all_calling_points.all()
+                if cp.public_visible]
+
     def __str__(self):
         return '{}'.format(self.rtti_train_id)
 
@@ -114,10 +128,12 @@ class TimetableJourney(models.Model):
         return self.calling_points.all().count()
 
     def start(self):
-        return self.calling_points.all().order_by('id').first()
+        public_calling_points = self.public_calling_points
+        return public_calling_points[0] if public_calling_points else None
 
     def end(self):
-        return self.calling_points.all().order_by('id').last()
+        public_calling_points = self.public_calling_points
+        return public_calling_points[-1] if public_calling_points else None
 
     def time_to_datetime(self, time):
         """
@@ -162,11 +178,16 @@ class CallingPoint(models.Model):
         ('OPDT', 'Operational Destination'),
     ))
 
+    class Meta:
+        ordering = ['id']
+
     created_at = models.DateTimeField(auto_now_add=True)
+
+    public_visible = models.BooleanField(default=True)
 
     journey = models.ForeignKey(
         TimetableJourney,
-        related_name='calling_points',
+        related_name='all_calling_points',
     )
 
     location = models.ForeignKey(
@@ -175,7 +196,7 @@ class CallingPoint(models.Model):
     )
 
     calling_point_type = models.CharField(
-        max_length=2,
+        max_length=4,
         choices=TYPE_CHOICES.items()
     )
 
@@ -256,6 +277,9 @@ class ActualArrival(models.Model):
             self.time)
         timetable_dt = self.timetabled_calling_point.journey.time_to_datetime(
             self.timetabled_calling_point.timetable_arrival_time)
+
+        if actual_dt is None or timetable_dt is None:
+            raise ValueError('Missing actual or timetable datetime')
 
         return max(
             int((actual_dt - timetable_dt).total_seconds() / 60),

@@ -30,6 +30,7 @@ class CallingPointInline(admin.TabularInline):
     can_delete = False
 
     fields = (
+        'calling_point_type',
         'location',
         'timetable_arrival_time',
         'timetable_arrival_datetime',
