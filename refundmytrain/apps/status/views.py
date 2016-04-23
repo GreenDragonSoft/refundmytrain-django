@@ -27,15 +27,12 @@ class StatusIndex(TemplateView):
 
         alerts = []
 
-        if longer_ago_than(60, latest_import_log.import_datetime):
-            alerts.append('Latest import log was >1 hour ago.')
+        if longer_ago_than(30, latest_import_log.import_datetime):
+            alerts.append('Latest import log was >30 minutes ago.')
 
         if longer_ago_than(20, latest_actual_arrival.created_at):
             alerts.append('Latest ActualArrival was created >20 minutes ago.')
 
-        if longer_ago_than(120, latest_actual_arrival.to_datetime()):
-            alerts.append('Latest ActualArrival train arrival time was >2 '
-                          'hour ago')
         if alerts:
             self.response_class = TemplateResponseServerError
         else:
