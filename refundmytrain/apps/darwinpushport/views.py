@@ -22,7 +22,7 @@ class TimetableJourneyList(ListView):
             maximum_minutes_late__gte=30,
         )
 
-        return journeys.order_by('start_date')[0:10]
+        return journeys.order_by('-rtti_train_id')[0:20]
 
 
 class TimetableJourneyListFromTo(TemplateView):
