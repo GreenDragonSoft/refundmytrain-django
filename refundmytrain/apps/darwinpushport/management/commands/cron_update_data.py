@@ -71,8 +71,12 @@ def download_latest(ftp):
                 record_loaded(filename)
                 pass
 
-    for filename in push_port_files:
+    while len(push_port_files):
+        filename = push_port_files.pop(0)
+
         if not already_loaded(filename):
+            LOG.info('Loading push port {} ({} remaining)'.format(
+                filename, len(push_port_files)))
             with download_file(ftp, filename) as fobj:
                 load_push_port_file(filename, fobj)
                 record_loaded(filename)
@@ -156,7 +160,6 @@ def download_file(ftp, filename):
 
 
 def load_push_port_file(filename, f):
-    LOG.info('Loading push port data {}'.format(filename))
     import_push_port_messages(f)
 
 
