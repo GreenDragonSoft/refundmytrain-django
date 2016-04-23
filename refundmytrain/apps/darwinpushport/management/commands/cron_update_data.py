@@ -39,7 +39,8 @@ class Command(BaseCommand):
         try:
             handle(host, username, password)
         except Exception as e:
-            LOG.error(e)
+            LOG.exception(e)
+            raise
 
 
 def handle(host, username, password):
