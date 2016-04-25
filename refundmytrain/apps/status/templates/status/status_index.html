@@ -28,7 +28,8 @@
 
   <h2>{{ num_actual_arrivals|intcomma }} <span class="small">actual arrivals</span></h2>
   <p>
-  most recently loaded <em>{{ latest_actual_arrival.created_at|naturaltime }}</em>, arrival was <em>{{ latest_actual_arrival.to_datetime|naturaltime }}</em>
+    most recently loaded <em>{{ latest_actual_arrival.created_at|naturaltime }}</em>, arrival was
+    <a href="{% url 'journey-detail' pk=latest_actual_arrival.timetabled_calling_point.journey.rtti_train_id %}"><em>{{ latest_actual_arrival.to_datetime|naturaltime }}</em></a>
   </p>
 
   <h2>{{ num_import_logs|intcomma }} <span class="small">files ingested</span></h2>
