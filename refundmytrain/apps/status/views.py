@@ -51,15 +51,9 @@ class StatusIndex(TemplateView):
             'num_non_passenger_journeys':
                 NonPassengerJourney.objects.all().count(),
 
-            'num_calling_points': all_calling_points.count(),
-
             'num_calling_points_timetable_arrival':
                 all_calling_points.filter(
                     timetable_arrival_time__isnull=False).count(),
-
-            'num_calling_points_public_visible':
-                all_calling_points.filter(
-                    public_visible=True).count(),
 
             'num_actual_arrivals': ActualArrival.objects.all().count(),
             'latest_actual_arrival': latest_actual_arrival,
