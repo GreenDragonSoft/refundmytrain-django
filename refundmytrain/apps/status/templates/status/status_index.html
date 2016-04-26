@@ -15,17 +15,6 @@
 
   {% endif %}
 
-  <h2>{{ num_journeys|intcomma }} <span class="small">scheduled journeys</span></h2>
-
-  <p>between {{ earliest_journey.start_date|naturalday }} and {{ latest_journey.start_date|naturalday }}</p>
-
-  <p>plus {{ num_non_passenger_journeys|intcomma }} non-passenger journeys</p>
-
-  <h2>{{ num_calling_points|intcomma }} <span class="small">calling points</span></h2>
-  <p>of which {{ num_calling_points_public_visible|intcomma }} are marked as publicly visible.</p>
-  <p>and of which {{ num_calling_points_timetable_arrival|intcomma }} have a public timetabled arrival time.</p>
-
-
   <h2>{{ num_actual_arrivals|intcomma }} <span class="small">actual arrivals</span></h2>
   <p>
     most recently loaded <em>{{ latest_actual_arrival.created_at|naturaltime }}</em>, arrival was
@@ -36,6 +25,16 @@
   <p>
   most recently <em>{{ latest_import_log.filename }}</em>, imported <em>{{ latest_import_log.import_datetime|naturaltime }}.</em>
   </p>
+
+  <h2>{{ num_journeys|intcomma }} <span class="small">scheduled journeys</span></h2>
+
+  <p>between {{ earliest_journey.start_date|naturalday }} and {{ latest_journey.start_date|naturalday }}</p>
+
+  <p>plus {{ num_non_passenger_journeys|intcomma }} non-passenger journeys</p>
+
+  <h2>{{ num_calling_points_timetable_arrival|intcomma }}  <span class="small">calling points</span></h2>
+  <p>with a public timetabled arrival time</p>
+
 
   <h2>{{ num_locations|intcomma }} <span class="small"> locations</span></h2>
   <p>of which {{ num_locations_with_three_alpha|intcomma }} have a "three-alpha" code</p>
