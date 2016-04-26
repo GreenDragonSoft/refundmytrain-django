@@ -156,8 +156,14 @@ def handle_train_status(ts_element):
 
 
 def handle_late_reason_tag(late_reason_tag, journey):
-    journey.late_reason = late_reason_tag.text.strip()
-    journey.save()
+    previous_late_reason = journey.late_reason
+    new_late_reason = late_reason_tag.text.strip()
+
+    if previous_late_reason != new_late_reason:
+        journey.late_reason = new_late_reason
+        journey.save()
+        LOG.info('{} updated late reason from {} to {}'.format(
+            journey.rtti_train_id, previous_late_reason, new_late_reason))
 
 
 def handle_train_status_location(location_element, journey):
