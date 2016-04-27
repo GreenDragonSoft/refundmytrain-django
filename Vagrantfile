@@ -51,7 +51,7 @@ config.vm.provider :virtualbox do |vb|
   # vb.gui = true
 
   # Use VBoxManage to customize the VM. For example to change memory:
-  vb.customize ["modifyvm", :id, "--memory", "2048"]
+  vb.customize ["modifyvm", :id, "--memory", "1024"]
   config.vm.synced_folder ".", "/home/vagrant/app"
   config.vm.synced_folder "../../refundmytrain", "/home/vagrant/refundmytrain"
 end
