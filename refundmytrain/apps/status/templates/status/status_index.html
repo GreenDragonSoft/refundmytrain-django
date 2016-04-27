@@ -15,11 +15,18 @@
 
   {% endif %}
 
-  <h2>{{ num_actual_arrivals|intcomma }} <span class="small">actual arrivals</span></h2>
+  <h2>{{ num_actual_arrivals_last_hour|intcomma }} <span class="small">actual arrivals in the last hour</span></h2>
   <p>
     most recently loaded <em>{{ latest_actual_arrival.created_at|naturaltime }}</em>, arrival was
     <a href="{% url 'journey-detail' pk=latest_actual_arrival.timetabled_calling_point.journey.rtti_train_id %}"><em>{{ latest_actual_arrival.to_datetime|naturaltime }}</em></a>
   </p>
+
+  <h2>{{ num_recent_late_journeys|intcomma }} <span class="small">late journeys reported in the last hour</span></h2>
+  <ul>
+    {% for journey in recent_late_journeys %}
+    <a href="{% url 'journey-detail' pk=journey.rtti_train_id %}">{{ journey.rtti_train_id }}, max {{ journey.maximum_minutes_late }} mins late }}</a>
+    {% endfor %}
+  </ul>
 
   <h2>{{ num_import_logs|intcomma }} <span class="small">files ingested</span></h2>
   <p>
@@ -31,10 +38,6 @@
   <p>between {{ earliest_journey.start_date|naturalday }} and {{ latest_journey.start_date|naturalday }}</p>
 
   <p>plus {{ num_non_passenger_journeys|intcomma }} non-passenger journeys</p>
-
-  <h2>{{ num_calling_points_timetable_arrival|intcomma }}  <span class="small">calling points</span></h2>
-  <p>with a public timetabled arrival time</p>
-
 
   <h2>{{ num_locations|intcomma }} <span class="small"> locations</span></h2>
   <p>of which {{ num_locations_with_three_alpha|intcomma }} have a "three-alpha" code</p>

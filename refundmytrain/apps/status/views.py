@@ -1,4 +1,5 @@
 import collections
+import datetime
 
 from django.views.generic.base import TemplateView
 from django.utils import timezone
@@ -21,9 +22,14 @@ class StatusIndex(TemplateView):
     template_name = 'status/status_index.html'
 
     def get_context_data(self):
-        all_calling_points = CallingPoint.objects.all()
+        one_hour_ago = timezone.now() - datetime.timedelta(hours=1)
+
         latest_import_log = get_latest_import_log()
         latest_actual_arrival = get_latest_actual_arrival()
+        actual_arrivals_last_hour = ActualArrival.objects.filter(
+            created_at__gte=one_hour_ago)
+        recent_late_journeys = actual_arrivals_last_hour.filter(
+            timetabled_calling_point__journey__maximum_minutes_late__gte=30)
 
         alerts = []
 
@@ -51,11 +57,10 @@ class StatusIndex(TemplateView):
             'num_non_passenger_journeys':
                 NonPassengerJourney.objects.all().count(),
 
-            'num_calling_points_timetable_arrival':
-                all_calling_points.filter(
-                    timetable_arrival_time__isnull=False).count(),
+            'num_actual_arrivals_last_hour': actual_arrivals_last_hour.count(),
 
-            'num_actual_arrivals': ActualArrival.objects.all().count(),
+            'num_recent_late_journeys': recent_late_journeys.count(),
+            'recent_late_journeys': recent_late_journeys,
             'latest_actual_arrival': latest_actual_arrival,
             'num_import_logs': ImportLog.objects.all().count(),
             'latest_import_log': latest_import_log,
