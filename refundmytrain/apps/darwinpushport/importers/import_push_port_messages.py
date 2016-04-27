@@ -243,12 +243,8 @@ def record_actual_arrival(journey, tiploc, time, timetabled_time):
         if calling_point.timetable_arrival_time is None:
             raise CantFindMatchingCallingPoint
 
-        with transaction.atomic():
-            ActualArrival.objects.filter(
-                timetabled_calling_point=calling_point).delete()
-
-            a = ActualArrival.objects.create(
-                timetabled_calling_point=calling_point,
-                time=time
-            )
-            return a.minutes_late()
+        a, _ = ActualArrival.objects.update_or_create(
+            timetabled_calling_point=calling_point,
+            defaults={'time': time}
+        )
+        return a.minutes_late()
